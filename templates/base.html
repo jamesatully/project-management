@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" x-data="theme" :class="{ 'dark': dark }">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M9 9h5v5H9zM18 9h5v5h-5zM9 18h5v5H9zM18 18h5v5h-5z' fill='white'/%3E%3C/svg%3E">
+  <title>{% block title %}Dashboard{% endblock %} · ProjectHub</title>
+  <script>
+    // Apply the saved/OS theme before paint to avoid a flash.
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("theme"); } catch (e) {}
+      var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (dark) document.documentElement.classList.add("dark");
+    })();
+  </script>
+  {# Tailwind Play CDN keeps local development build-free. See docs/architecture.md for the production plan. #}
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+          colors: {
+            primary: "#2a78d6",
+            "primary-dark": "#3987e5",
+            ink: "#1c2434",
+            body: "#64748b",
+            bodydark: "#aeb7c0",
+            bodydark2: "#8a99af",
+            stroke: "#e2e8f0",
+            strokedark: "#2e3a47",
+            whiten: "#f1f5f9",
+            boxdark: "#24303f",
+            "boxdark-2": "#1a222c",
+            sidebar: "#1c2434",
+            meter: { track: "#cde2fb", "track-dark": "#184f95" },
+            danger: "#e34948",
+          },
+          boxShadow: { card: "0px 1px 3px rgba(0, 0, 0, 0.08)" },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script>
+    document.addEventListener("alpine:init", function () {
+      Alpine.data("theme", function () {
+        return {
+          dark: document.documentElement.classList.contains("dark"),
+          sidebarOpen: false,
+          toggleTheme: function () {
+            this.dark = !this.dark;
+            try { localStorage.setItem("theme", this.dark ? "dark" : "light"); } catch (e) {}
+          },
+        };
+      });
+    });
+  </script>
+  <style>[x-cloak] { display: none !important; }</style>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-whiten font-sans text-sm text-body antialiased dark:bg-boxdark-2 dark:text-bodydark">
+{% block body %}
+<div class="flex h-screen overflow-hidden">
+
+  {# ---------- Sidebar ---------- #}
+  <div x-cloak x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-40 bg-black/50 lg:hidden"></div>
+  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+         class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0">
+    <div class="flex items-center gap-2.5 px-6 py-6">
+      <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
+        {% include "partials/icon.html" with name="grid" %}
+      </span>
+      <span class="text-lg font-semibold text-white">ProjectHub</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-4 pb-6">
+      <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-bodydark2">Menu</p>
+      <ul class="space-y-1">
+        <li>
+          <a href="{% url 'pm:dashboard' %}"
+             class="flex items-center gap-3 rounded-md px-3 py-2 font-medium {% if active_nav == 'dashboard' %}bg-white/10 text-white{% else %}text-bodydark hover:bg-white/5 hover:text-white{% endif %}">
+            {% include "partials/icon.html" with name="grid" %} Dashboard
+          </a>
+        </li>
+        {% for item in nav_items %}
+        <li>
+          <a href="{{ item.url }}"
+             class="flex items-center gap-3 rounded-md px-3 py-2 font-medium {% if active_nav == item.key %}bg-white/10 text-white{% else %}text-bodydark hover:bg-white/5 hover:text-white{% endif %}">
+            {% include "partials/icon.html" with name=item.icon %} {{ item.label }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-bodydark2">Developer</p>
+      <ul class="space-y-1">
+        <li><a href="{% url 'api-docs' %}" class="flex items-center gap-3 rounded-md px-3 py-2 font-medium text-bodydark hover:bg-white/5 hover:text-white">{% include "partials/icon.html" with name="code" %} API docs</a></li>
+        {% if user.is_staff %}
+        <li><a href="{% url 'admin:index' %}" class="flex items-center gap-3 rounded-md px-3 py-2 font-medium text-bodydark hover:bg-white/5 hover:text-white">{% include "partials/icon.html" with name="cog" %} Admin</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </aside>
+
+  {# ---------- Main column ---------- #}
+  <div class="flex flex-1 flex-col overflow-y-auto">
+    <header class="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-stroke bg-white px-4 py-4 dark:border-strokedark dark:bg-boxdark md:px-6">
+      <div class="flex items-center gap-3">
+        <button @click="sidebarOpen = true" class="rounded-md border border-stroke p-1.5 dark:border-strokedark lg:hidden" aria-label="Open menu">
+          {% include "partials/icon.html" with name="menu" %}
+        </button>
+        <h1 class="text-lg font-semibold text-ink dark:text-white">{% block page_title %}{% endblock %}</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <button @click="toggleTheme()" class="rounded-full bg-whiten p-2 hover:text-primary dark:bg-boxdark-2" aria-label="Toggle dark mode">
+          <span x-show="!dark">{% include "partials/icon.html" with name="moon" %}</span>
+          <span x-cloak x-show="dark">{% include "partials/icon.html" with name="sun" %}</span>
+        </button>
+        {% if user.is_authenticated %}
+        <div x-data="{ open: false }" class="relative">
+          <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 font-semibold uppercase text-primary dark:text-primary-dark">{{ user.get_username|slice:":1" }}</span>
+            <span class="hidden font-medium text-ink dark:text-white sm:block">{{ user.get_full_name|default:user.get_username }}</span>
+          </button>
+          <div x-cloak x-show="open" class="absolute right-0 mt-2 w-44 rounded-md border border-stroke bg-white py-1 shadow-card dark:border-strokedark dark:bg-boxdark">
+            <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+              <button class="w-full px-4 py-2 text-left hover:bg-whiten dark:hover:bg-boxdark-2">Log out</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-screen-2xl p-4 md:p-6">
+      {% if messages %}
+      <div class="mb-5 space-y-2">
+        {% for message in messages %}
+        <div x-data="{ show: true }" x-show="show"
+             class="flex items-start justify-between rounded-md border-l-4 px-4 py-3 {% if message.tags == 'error' %}border-danger bg-rose-50 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200{% else %}border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200{% endif %}">
+          <span>{{ message }}</span>
+          <button @click="show = false" class="ml-4 opacity-60 hover:opacity-100" aria-label="Dismiss">&times;</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+</body>
+</html>

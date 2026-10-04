@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<div class="flex min-h-screen items-center justify-center p-4">
+  <div class="w-full max-w-sm rounded-lg border border-stroke bg-white p-8 shadow-card dark:border-strokedark dark:bg-boxdark">
+    <div class="mb-6 flex items-center gap-2.5">
+      <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">{% include "partials/icon.html" with name="grid" %}</span>
+      <span class="text-lg font-semibold text-ink dark:text-white">ProjectHub</span>
+    </div>
+    <h1 class="text-xl font-semibold text-ink dark:text-white">Sign in</h1>
+    {% if form.errors %}
+    <p class="mt-4 rounded-md border-l-4 border-danger bg-rose-50 px-4 py-3 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">Your username and password didn't match. Please try again.</p>
+    {% endif %}
+    <form method="post" class="mt-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <div>
+        <label for="id_username" class="mb-1.5 block font-medium text-ink dark:text-white">Username</label>
+        <input id="id_username" name="username" autocomplete="username" autofocus required value="{{ form.username.value|default:'' }}"
+               class="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-strokedark dark:bg-boxdark-2 dark:text-white">
+      </div>
+      <div>
+        <label for="id_password" class="mb-1.5 block font-medium text-ink dark:text-white">Password</label>
+        <input id="id_password" name="password" type="password" autocomplete="current-password" required
+               class="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-strokedark dark:bg-boxdark-2 dark:text-white">
+      </div>
+      <button type="submit" class="w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-primary/90">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

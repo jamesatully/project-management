@@ -1,0 +1,101 @@
+# ProjectHub — Project Management Demo
+
+A Django dashboard for tracking capital, development and environmental projects
+together with their vendors, purchase orders, invoices, field reports and
+documents. Every record is also available through a documented REST API.
+
+> **Demo data only.** All project names, people, vendors, budgets and invoices
+> in this app are fictitious. It exists to prototype components and features for
+> brainstorming and possible adoption into enterprise project-management tools.
+
+## Features
+
+- **Dashboard**: KPI tiles, invoiced-vs-committed meters per project, projects
+  by status/type, invoices awaiting payment, recent field reports and documents.
+- **List / detail / create / edit / delete** pages for every record type, with
+  search, filters, sortable columns and pagination.
+- **Related records on detail pages**: a project shows its POs, field reports and
+  documents; a vendor shows its POs and invoices; a PO shows its invoices.
+- **REST API** for all data, with interactive docs (Swagger UI and ReDoc) and an
+  OpenAPI schema.
+- **Business rules** enforced the same way in forms and the API (e.g. an invoice's
+  vendor must match its purchase order's vendor; paid invoices need a paid date).
+- UUID primary keys, PostgreSQL, Docker, light/dark mode, responsive layout.
+
+## Quick start
+
+Requires Docker with Compose v2.
+
+```bash
+git clone https://github.com/jamesatully/project-management.git
+cd project-management
+cp .env.example .env                 # optional; defaults work for local use
+docker compose up -d --build
+docker compose exec web python manage.py createsuperuser
+```
+
+Open <http://localhost:8000> and sign in.
+
+| URL | What |
+|---|---|
+| `/` | Dashboard |
+| `/projects/`, `/vendors/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
+| `/api/` | Browsable REST API |
+| `/api/docs/` | Swagger UI |
+| `/api/redoc/` | ReDoc |
+| `/admin/` | Django admin |
+
+## Data model
+
+```
+Vendor ──< PurchaseOrder ──< Invoice
+                │
+Project ──< (optional) PurchaseOrder
+   ├──< FieldReport
+   └──< Document
+```
+
+| Model | Key fields |
+|---|---|
+| **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP / Development / Environmental), status, project manager |
+| **Vendor** | name, mailing address, website, primary contact name and phone |
+| **Purchase Order** | PO number, status, amount, vendor, project *(optional)*, contract number, start/end dates |
+| **Invoice** | invoice number (unique per vendor), vendor, purchase order, status, amount, invoice/received/paid dates |
+| **Field Report** | project, entered by, report date, data entry date, hours on site, observation/safety/weather notes |
+| **Document** | project, subject, originating and recipient organizations, type, document date, added and last-edited timestamps |
+
+All models use UUID primary keys and carry `created_at` / `updated_at`.
+Full field reference: [docs/data-model.md](docs/data-model.md).
+
+## API
+
+```bash
+# Get a token (or create one: docker compose exec web python manage.py drf_create_token <user>)
+curl -X POST localhost:8000/api/auth/token/ -d username=admin -d password=...
+
+curl -H "Authorization: Token <key>" "localhost:8000/api/projects/?status=CONSTRUCTION&search=trail"
+```
+
+See [docs/api.md](docs/api.md) for endpoints, filters and examples.
+
+## Development
+
+```bash
+docker compose exec web python manage.py test pm        # run tests
+docker compose exec web python manage.py makemigrations # after model changes
+docker compose logs -f web                              # server logs
+```
+
+The local compose file runs Django's dev server with the source mounted, so code
+changes reload automatically. Architecture notes and the hosting plan are in
+[docs/architecture.md](docs/architecture.md).
+
+## Tech stack
+
+Django 5.2 LTS · Django REST Framework · drf-spectacular · django-filter ·
+PostgreSQL 17 · Tailwind CSS (TailAdmin-style layout) · Alpine.js · Heroicons ·
+Gunicorn · WhiteNoise · Docker
+
+## License
+
+MIT — see [LICENSE](LICENSE).

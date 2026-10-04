@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{% if is_update %}Edit {{ object }}{% else %}New {{ resource.verbose_name|lower }}{% endif %}{% endblock %}
+{% block page_title %}{{ resource.verbose_name_plural }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl">
+  <a href="{{ cancel_url }}" class="inline-flex items-center gap-1.5 text-xs font-medium hover:text-primary">
+    {% include "partials/icon.html" with name="arrow-left" size="h-3.5 w-3.5" %} Back
+  </a>
+  <h2 class="mb-5 mt-1 text-2xl font-semibold text-ink dark:text-white">
+    {% if is_update %}Edit {{ object }}{% else %}New {{ resource.verbose_name|lower }}{% endif %}
+  </h2>
+
+  <form method="post" novalidate class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="mb-5 rounded-md border-l-4 border-danger bg-rose-50 px-4 py-3 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
+      {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {% for field in form %}
+      <div class="{% if field.widget_type == 'textarea' %}sm:col-span-2{% endif %}">
+        <label for="{{ field.id_for_label }}" class="mb-1.5 block font-medium text-ink dark:text-white">
+          {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}<p class="mt-1 text-xs text-bodydark2">{{ field.help_text }}</p>{% endif %}
+        {% for e in field.errors %}<p class="mt-1 text-xs text-danger">{{ e }}</p>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-6 flex justify-end gap-3 border-t border-stroke pt-5 dark:border-strokedark">
+      <a href="{{ cancel_url }}" class="rounded-lg border border-stroke px-5 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Cancel</a>
+      <button type="submit" class="rounded-lg bg-primary px-5 py-2.5 font-medium text-white hover:bg-primary/90">
+        {% if is_update %}Save changes{% else %}Create {{ resource.verbose_name|lower }}{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

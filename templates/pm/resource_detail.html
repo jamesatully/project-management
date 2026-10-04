@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ object }}{% endblock %}
+{% block page_title %}{{ resource.verbose_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <a href="{{ list_url }}" class="inline-flex items-center gap-1.5 text-xs font-medium hover:text-primary">
+      {% include "partials/icon.html" with name="arrow-left" size="h-3.5 w-3.5" %} All {{ resource.verbose_name_plural|lower }}
+    </a>
+    <h2 class="mt-1 text-2xl font-semibold text-ink dark:text-white">{{ object }}</h2>
+  </div>
+  <div class="flex gap-2">
+    <a href="{{ edit_url }}" class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-primary/90">
+      {% include "partials/icon.html" with name="pencil" size="h-4 w-4" %} Edit
+    </a>
+    <a href="{{ delete_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-stroke px-4 py-2.5 font-medium text-danger hover:bg-rose-50 dark:border-strokedark dark:hover:bg-rose-500/10">
+      {% include "partials/icon.html" with name="trash" size="h-4 w-4" %} Delete
+    </a>
+  </div>
+</div>
+
+<section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark">
+  <dl class="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+    {% for f in fields %}
+    <div class="{% if f.wide %}sm:col-span-2 xl:col-span-3{% endif %}">
+      <dt class="text-xs font-medium uppercase tracking-wide text-bodydark2">{{ f.label }}</dt>
+      <dd class="mt-1 text-ink dark:text-white">{{ f.value }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+  <p class="mt-6 border-t border-stroke pt-4 text-xs text-bodydark2 dark:border-strokedark">
+    ID {{ object.pk }} · Created {{ object.created_at|date:"M j, Y g:i A" }} · Updated {{ object.updated_at|date:"M j, Y g:i A" }}
+  </p>
+</section>
+
+{% for table in related_tables %}
+<section class="mt-6 rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="flex items-center justify-between px-6 pt-6">
+    <h3 class="font-semibold text-ink dark:text-white">{{ table.resource.verbose_name_plural }} <span class="ml-1 font-normal text-bodydark2">({{ table.count }})</span></h3>
+    <div class="flex items-center gap-4">
+      {% if table.count > table.rows|length %}<a href="{{ table.all_url }}" class="text-sm font-medium text-primary hover:underline">View all</a>{% endif %}
+      <a href="{{ table.add_url }}" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Add
+      </a>
+    </div>
+  </div>
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-left">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>{% for col in table.columns %}<th class="whitespace-nowrap px-6 py-3 font-medium {% if col.kind == 'money' or col.kind == 'hours' %}text-right{% endif %}">{{ col.label }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for cells in table.rows %}
+        <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+          {% for col, cell in cells %}<td class="whitespace-nowrap px-6 py-3 {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>{% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ table.columns|length }}" class="px-6 py-6 text-center">None yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

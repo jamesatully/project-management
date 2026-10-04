@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load pm_tags %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+{# ---------- KPI row ---------- #}
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
+  {% for stat in stats %}
+  <a href="{{ stat.url }}" class="rounded-lg border border-stroke bg-white p-6 shadow-card transition hover:border-primary/40 dark:border-strokedark dark:bg-boxdark">
+    <p class="text-sm font-medium text-body dark:text-bodydark2">{{ stat.label }}</p>
+    <p class="mt-2 text-2xl font-bold tabular-nums text-ink dark:text-white">{{ stat.value }}</p>
+    <p class="mt-1 text-xs text-body dark:text-bodydark2">{{ stat.sub }}</p>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="mt-6 grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-12">
+
+  {# ---------- Budget burn (meters) ---------- #}
+  <section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-7">
+    <h2 class="font-semibold text-ink dark:text-white">Invoiced vs. committed</h2>
+    <p class="mt-1 text-xs text-body dark:text-bodydark2">Projects with the largest purchase-order commitments</p>
+    {% if spend %}
+    <ul class="mt-5 space-y-5">
+      {% for row in spend %}
+      <li title="{{ row.project.name }}: {{ row.spent }} invoiced of {{ row.committed }} committed ({{ row.pct_label }})">
+        <div class="mb-1.5 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+          <a href="{{ row.project.get_absolute_url }}" class="truncate font-medium text-ink hover:text-primary dark:text-white">{{ row.project.name }}</a>
+          <span class="text-xs tabular-nums sm:shrink-0 text-body dark:text-bodydark2">
+            {{ row.spent }} / {{ row.committed }}
+            <span class="ml-1 font-semibold {% if row.over %}text-danger{% else %}text-ink dark:text-white{% endif %}">{{ row.pct_label }}{% if row.over %} · over budget{% endif %}</span>
+          </span>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-meter-track dark:bg-meter-track-dark" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ row.pct|floatformat:0 }}" aria-label="{{ row.project.name }} invoiced share">
+          <div class="h-full rounded-full {% if row.over %}bg-danger{% else %}bg-primary dark:bg-primary-dark{% endif %}" style="width: {{ row.pct|floatformat:1 }}%"></div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="mt-6 text-body dark:text-bodydark2">No purchase orders linked to projects yet.</p>
+    {% endif %}
+  </section>
+
+  {# ---------- Projects by status (single-series bar list) ---------- #}
+  <section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-5">
+    <h2 class="font-semibold text-ink dark:text-white">Projects by status</h2>
+    <ul class="mt-5 space-y-3">
+      {% for s in status_breakdown %}
+      <li class="grid grid-cols-[7rem_1fr_2rem] items-center gap-3" title="{{ s.label }}: {{ s.count }} project{{ s.count|pluralize }}">
+        <a href="{% url 'pm:project-list' %}?status={{ s.value }}" class="truncate hover:text-primary">{{ s.label }}</a>
+        <div class="h-5">
+          {% if s.count %}<div class="h-full rounded-r bg-primary dark:bg-primary-dark" style="width: {{ s.pct|floatformat:1 }}%; min-width: 4px"></div>{% endif %}
+        </div>
+        <span class="text-right font-medium tabular-nums text-ink dark:text-white">{{ s.count }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="mt-6 grid grid-cols-3 divide-x divide-stroke border-t border-stroke pt-5 text-center dark:divide-strokedark dark:border-strokedark">
+      {% for t in type_breakdown %}
+      <div>
+        <p class="text-xl font-bold tabular-nums text-ink dark:text-white">{{ t.count }}</p>
+        <p class="text-xs text-body dark:text-bodydark2">{{ t.label }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ---------- Pending invoices ---------- #}
+  <section class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-12">
+    <div class="flex items-center justify-between px-6 pt-6">
+      <h2 class="font-semibold text-ink dark:text-white">Invoices awaiting payment</h2>
+      <a href="{% url 'pm:invoice-list' %}" class="text-sm font-medium text-primary hover:underline">View all</a>
+    </div>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full whitespace-nowrap text-left">
+        <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+          <tr><th class="px-6 py-3 font-medium">Invoice</th><th class="px-6 py-3 font-medium">Vendor</th><th class="px-6 py-3 font-medium">PO</th><th class="px-6 py-3 text-right font-medium">Amount</th><th class="px-6 py-3 font-medium">Status</th><th class="px-6 py-3 font-medium">Invoice date</th></tr>
+        </thead>
+        <tbody class="divide-y divide-stroke dark:divide-strokedark">
+          {% for inv in pending_invoices %}
+          <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+            <td class="px-6 py-3"><a href="{{ inv.get_absolute_url }}" class="font-medium text-primary hover:underline">{{ inv.invoice_number }}</a></td>
+            <td class="px-6 py-3">{{ inv.vendor }}</td>
+            <td class="px-6 py-3">{{ inv.purchase_order.po_number }}</td>
+            <td class="px-6 py-3 text-right tabular-nums text-ink dark:text-white">{{ inv.amount|money }}</td>
+            <td class="px-6 py-3">{{ inv|status_badge }}</td>
+            <td class="px-6 py-3">{{ inv.invoice_date|date:"M j, Y" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-6 py-6 text-center">Nothing pending.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {# ---------- Recent activity ---------- #}
+  <section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-6">
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold text-ink dark:text-white">Recent field reports</h2>
+      <a href="{% url 'pm:fieldreport-list' %}" class="text-sm font-medium text-primary hover:underline">View all</a>
+    </div>
+    <ul class="mt-4 divide-y divide-stroke dark:divide-strokedark">
+      {% for r in recent_reports %}
+      <li class="py-3">
+        <a href="{{ r.get_absolute_url }}" class="font-medium text-ink hover:text-primary dark:text-white">{{ r.project.name }}</a>
+        <p class="text-xs">{{ r.report_date|date:"M j, Y" }} · {{ r.entered_by }} · {{ r.time_on_site|floatformat:"-1" }} h on site</p>
+      </li>
+      {% empty %}
+      <li class="py-3">No field reports yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-6">
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold text-ink dark:text-white">Recent documents</h2>
+      <a href="{% url 'pm:document-list' %}" class="text-sm font-medium text-primary hover:underline">View all</a>
+    </div>
+    <ul class="mt-4 divide-y divide-stroke dark:divide-strokedark">
+      {% for d in recent_documents %}
+      <li class="py-3">
+        <a href="{{ d.get_absolute_url }}" class="font-medium text-ink hover:text-primary dark:text-white">{{ d.subject }}</a>
+        <p class="text-xs">{{ d.get_document_type_display }} · {{ d.originating_organization }} → {{ d.recipient_organization }} · {{ d.document_date|date:"M j, Y" }}</p>
+      </li>
+      {% empty %}
+      <li class="py-3">No documents yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

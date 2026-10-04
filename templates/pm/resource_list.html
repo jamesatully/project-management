@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ resource.verbose_name_plural }}{% endblock %}
+{% block page_title %}{{ resource.verbose_name_plural }}{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+
+  {# ---------- Toolbar: search, filters, add ---------- #}
+  <form method="get" class="flex flex-wrap items-end gap-3 border-b border-stroke p-4 dark:border-strokedark md:p-6">
+    <div class="relative min-w-[14rem] flex-1">
+      <label for="q" class="mb-1.5 block text-xs font-medium">Search</label>
+      <span class="pointer-events-none absolute bottom-2.5 left-3 text-bodydark2">{% include "partials/icon.html" with name="search" size="h-4 w-4" %}</span>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="Search {{ resource.verbose_name_plural|lower }}…"
+             class="w-full rounded-lg border border-stroke bg-transparent py-2.5 pl-9 pr-4 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-strokedark dark:bg-boxdark-2 dark:text-white">
+    </div>
+    {% for field in filter_form %}
+    <div class="w-44">
+      <label for="{{ field.id_for_label }}" class="mb-1.5 block text-xs font-medium">{{ field.label }}</label>
+      {{ field }}
+    </div>
+    {% endfor %}
+    {% if ordering %}<input type="hidden" name="o" value="{{ ordering }}">{% endif %}
+    <div class="flex gap-2">
+      <button class="rounded-lg border border-stroke px-4 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Apply</button>
+      {% if querystring %}<a href="?" class="rounded-lg px-3 py-2.5 font-medium hover:text-primary">Reset</a>{% endif %}
+    </div>
+    <a href="{{ create_url }}" class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-primary/90">
+      {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} New {{ resource.verbose_name|lower }}
+    </a>
+  </form>
+
+  {# ---------- Table ---------- #}
+  <div class="overflow-x-auto">
+    <table class="w-full text-left">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>
+          {% for col in columns %}
+          <th class="whitespace-nowrap px-6 py-3 font-medium {% if col.kind == 'money' or col.kind == 'hours' %}text-right{% endif %}">
+            <a href="?{% if sort_querystring %}{{ sort_querystring }}&{% endif %}o={% if ordering == col.name %}-{% endif %}{{ col.name }}"
+               class="inline-flex items-center gap-1 hover:text-primary {% if ordering == col.name or ordering|slice:'1:' == col.name %}text-primary{% endif %}">
+              {{ col.label }}
+              {% if ordering == col.name %}↑{% elif ordering|slice:'1:' == col.name and ordering|slice:':1' == '-' %}↓{% endif %}
+            </a>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for obj, cells in rows %}
+        <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+          {% for col, cell in cells %}
+          <td class="whitespace-nowrap px-6 py-3.5 {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
+          {% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ columns|length }}" class="px-6 py-10 text-center">
+          No {{ resource.verbose_name_plural|lower }} found.
+          <a href="{{ create_url }}" class="font-medium text-primary hover:underline">Create one</a>.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ---------- Pagination ---------- #}
+  {% if is_paginated %}
+  <div class="flex items-center justify-between border-t border-stroke px-6 py-4 dark:border-strokedark">
+    <p class="text-xs">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}" class="rounded-md border border-stroke px-3 py-1.5 hover:bg-whiten dark:border-strokedark dark:hover:bg-boxdark-2">Previous</a>
+      {% endif %}
+      <span class="px-2 py-1.5">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}" class="rounded-md border border-stroke px-3 py-1.5 hover:bg-whiten dark:border-strokedark dark:hover:bg-boxdark-2">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="border-t border-stroke px-6 py-4 text-xs dark:border-strokedark">{{ paginator.count }} record{{ paginator.count|pluralize }}</p>
+  {% endif %}
+</div>
+{% endblock %}
