@@ -36,6 +36,24 @@ docker compose exec web python manage.py createsuperuser
 
 Open <http://localhost:8000> and sign in.
 
+### Demo data
+
+Load a fictitious water/wastewater utility dataset — about 100 projects (water
+mains, sewer rehab, treatment plant upgrades, reservoirs, studies,
+environmental and developer projects), 10 project managers, 50 vendors, ~250
+purchase orders, several thousand monthly invoices, and project field reports
+and correspondence:
+
+```bash
+docker compose exec web python manage.py seed_demo           # into an empty database
+docker compose exec web python manage.py seed_demo --flush   # replace existing data
+```
+
+Options: `--seed N` (different but reproducible dataset), `--projects N`,
+`--today YYYY-MM-DD` (reference date for statuses and history). All names,
+companies, addresses (`.example` domains, 555-01xx numbers) and amounts are
+invented; the generator lives in [`pm/demo.py`](pm/demo.py).
+
 | URL | What |
 |---|---|
 | `/` | Dashboard |

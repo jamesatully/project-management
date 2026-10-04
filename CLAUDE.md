@@ -20,6 +20,7 @@ docker compose exec web python manage.py test pm        # tests — run after ev
 docker compose exec web python manage.py makemigrations pm
 docker compose exec web python manage.py migrate
 docker compose logs -f web
+docker compose exec web python manage.py seed_demo --flush  # reload fictitious demo data
 ```
 
 Files created by `manage.py` inside the container (e.g. migrations) should be
@@ -35,6 +36,9 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - `pm/api/` — DRF serializers/viewsets/router. Serializers using
   `ModelCleanMixin` run model `clean()`.
 - `templates/` — `base.html` (layout, Tailwind config), `pm/` generic pages.
+- `pm/demo.py` — demo-data generator (fictitious water/wastewater utility);
+  `pm/management/commands/seed_demo.py` wraps it. When models change, update
+  the generator so `seed_demo` keeps working (covered by `pm/tests/test_seed.py`).
 - `docs/` — data-model.md, api.md, architecture.md.
 
 ## Conventions
