@@ -2,7 +2,7 @@
 import datetime
 from decimal import Decimal
 
-from ..models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 def make_vendor(**kw):
@@ -14,10 +14,15 @@ def make_project(**kw):
         "name": "Main St Rehab",
         "project_id": "2021-2-20-0",
         "budget_id": "6822015",
-        "project_type": Project.ProjectType.CIP,
+        "project_type": Project.ProjectType.CIP_RR,
         "project_manager": "Pat Example",
     }
     return Project.objects.create(**{**defaults, **kw})
+
+
+def make_compliance_unit(**kw):
+    defaults = {"name": "Northwest Wastewater Treatment System", "unit_type": ComplianceUnit.UnitType.WASTEWATER}
+    return ComplianceUnit.objects.create(**{**defaults, **kw})
 
 
 def make_po(vendor=None, project=None, **kw):
@@ -35,7 +40,7 @@ def make_field_report(project, **kw):
     return FieldReport.objects.create(project=project, **{**defaults, **kw})
 
 
-def make_document(project, **kw):
+def make_document(project=None, **kw):
     defaults = {
         "subject": "Notice to proceed",
         "originating_organization": "City",

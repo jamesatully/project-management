@@ -23,7 +23,7 @@
         {% for row in table.rows %}
         <tr class="align-top hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
           {% for col, cell in row.cells %}
-          <td class="px-6 py-3 {% if col.kind == 'text' or col.kind == 'link' %}min-w-[10rem]{% else %}whitespace-nowrap{% endif %} {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
+          <td class="px-6 py-3 {% if col.kind == 'links' %}min-w-[14rem]{% elif col.kind == 'text' or col.kind == 'link' %}min-w-[12rem]{% else %}whitespace-nowrap{% endif %} {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
           {% endfor %}
           <td class="px-4 py-3 text-right">
             <a href="{{ row.edit_url }}" class="inline-flex text-bodydark2 hover:text-primary" title="Edit" aria-label="Edit">{% include "partials/icon.html" with name="pencil" size="h-4 w-4" %}</a>

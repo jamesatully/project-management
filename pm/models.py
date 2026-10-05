@@ -6,8 +6,10 @@ Relationships::
     Vendor ──< PurchaseOrder ──< Invoice
                     │
     Project ──< (optional) PurchaseOrder
-       ├──< FieldReport
-       └──< Document
+       └──< FieldReport
+
+    Document ──> Project, ComplianceUnit, PurchaseOrder, Invoice
+                 (each optional; at least one required)
 
 Every model uses a UUID primary key and carries ``created_at`` / ``updated_at``
 audit timestamps via :class:`BaseModel`.
@@ -65,13 +67,40 @@ class Vendor(BaseModel):
         return self.name
 
 
+class ComplianceUnit(BaseModel):
+    """
+    A regulated system or permit the utility reports on, e.g. the "Northwest
+    Wastewater Treatment System" or a water use permit.
+    """
+
+    class UnitType(models.TextChoices):
+        WATER_USE_PERMIT = "WATER_USE_PERMIT", "Water Use Permit"
+        PUBLIC_WATER_SUPPLY = "PUBLIC_WATER_SUPPLY", "Public Water Supply"
+        WASTEWATER = "WASTEWATER", "Wastewater"
+        TANK = "TANK", "Tank"
+        STORMWATER = "STORMWATER", "Stormwater"
+        OTHER = "OTHER", "Other"
+
+    name = models.CharField("unit name", max_length=200, unique=True)
+    unit_type = models.CharField(max_length=30, choices=UnitType.choices)
+
+    url_name = "complianceunit"
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "compliance unit"
+
+    def __str__(self):
+        return self.name
+
+
 class Project(BaseModel):
     """A capital, development or environmental project."""
 
     class ProjectType(models.TextChoices):
-        CIP = "CIP", "CIP"
+        CIP_EXPANSION = "CIP_EXPANSION", "CIP Expansion"
+        CIP_RR = "CIP_RR", "CIP R&R"  # renewal and replacement
         DEVELOPMENT = "DEVELOPMENT", "Development"
-        ENVIRONMENTAL = "ENVIRONMENTAL", "Environmental"
 
     class Status(models.TextChoices):
         PLANNING = "PLANNING", "Planning"
@@ -216,7 +245,13 @@ class FieldReport(BaseModel):
 
 
 class Document(BaseModel):
-    """Project correspondence or record (letter, RFI, submittal, ...)."""
+    """
+    Correspondence or a record (letter, RFI, submittal, report, ...).
+
+    A document links to any combination of a project, compliance unit,
+    purchase order and invoice, but must link to at least one. Links use
+    PROTECT: a record can't be deleted while documents still reference it.
+    """
 
     class DocumentType(models.TextChoices):
         LETTER = "LETTER", "Letter"
@@ -230,7 +265,14 @@ class Document(BaseModel):
         DRAWING = "DRAWING", "Drawing"
         OTHER = "OTHER", "Other"
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="documents")
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name="documents", null=True, blank=True)
+    compliance_unit = models.ForeignKey(
+        ComplianceUnit, on_delete=models.PROTECT, related_name="documents", null=True, blank=True
+    )
+    purchase_order = models.ForeignKey(
+        PurchaseOrder, on_delete=models.PROTECT, related_name="documents", null=True, blank=True
+    )
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="documents", null=True, blank=True)
     subject = models.CharField(max_length=300)
     originating_organization = models.CharField(max_length=200)
     recipient_organization = models.CharField(max_length=200)
@@ -240,9 +282,29 @@ class Document(BaseModel):
     last_edited_date = models.DateTimeField(auto_now=True)
 
     url_name = "document"
+    LINK_FIELDS = ["project", "compliance_unit", "purchase_order", "invoice"]
 
     class Meta:
         ordering = ["-document_date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(project__isnull=False)
+                    | models.Q(compliance_unit__isnull=False)
+                    | models.Q(purchase_order__isnull=False)
+                    | models.Q(invoice__isnull=False)
+                ),
+                name="document_has_link",
+                violation_error_message=(
+                    "Link the document to at least one project, compliance unit, purchase order or invoice."
+                ),
+            ),
+        ]
 
     def __str__(self):
         return self.subject
+
+    @property
+    def linked_records(self):
+        """The records this document is linked to, in a fixed order."""
+        return [obj for obj in (getattr(self, f) for f in self.LINK_FIELDS) if obj is not None]

@@ -1,12 +1,19 @@
 from django.contrib import admin
 
-from .models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
     list_display = ["name", "primary_contact_name", "primary_contact_phone", "website"]
     search_fields = ["name", "primary_contact_name"]
+
+
+@admin.register(ComplianceUnit)
+class ComplianceUnitAdmin(admin.ModelAdmin):
+    list_display = ["name", "unit_type"]
+    list_filter = ["unit_type"]
+    search_fields = ["name"]
 
 
 @admin.register(Project)
@@ -41,7 +48,7 @@ class FieldReportAdmin(admin.ModelAdmin):
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ["subject", "project", "document_type", "document_date", "originating_organization"]
+    list_display = ["subject", "project", "compliance_unit", "document_type", "document_date"]
     list_filter = ["document_type"]
     search_fields = ["subject", "originating_organization", "recipient_organization"]
-    autocomplete_fields = ["project"]
+    autocomplete_fields = ["project", "compliance_unit", "purchase_order", "invoice"]

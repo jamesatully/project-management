@@ -45,7 +45,8 @@ Open <http://localhost:8000> and sign in.
 
 Load a fictitious water/wastewater utility dataset — about 100 projects (water
 mains, sewer rehab, treatment plant upgrades, reservoirs, studies,
-environmental and developer projects), 10 project managers, 50 vendors, ~250
+environmental and developer projects), 10 project managers, 50 vendors, 17 compliance units
+(treatment systems, water use permits, tanks, stormwater programs), ~250
 purchase orders, several thousand monthly invoices, project field reports and
 correspondence, and a plan for nearly every project with objectives, risks,
 stakeholders, milestones, a communication plan and monthly updates:
@@ -63,7 +64,7 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 | URL | What |
 |---|---|
 | `/` | Dashboard |
-| `/projects/`, `/vendors/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
+| `/projects/`, `/compliance-units/`, `/vendors/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
 | `/projects/<id>/plan/`, `/projects/<id>/activity/` | A project's plan and activity notes |
 | `/plans/`, `/risks/`, `/milestones/`, `/activity/` | Planning lists across all projects |
 | `/api/` | Browsable REST API |
@@ -77,18 +78,20 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 Vendor ──< PurchaseOrder ──< Invoice
                 │
 Project ──< (optional) PurchaseOrder
-   ├──< FieldReport
-   └──< Document
+   └──< FieldReport
+
+Document ──> Project, Compliance Unit, Purchase Order, Invoice   (any combination, at least one)
 ```
 
 | Model | Key fields |
 |---|---|
-| **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP / Development / Environmental), status, project manager |
+| **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP Expansion / CIP R&R / Development), status, project manager |
+| **Compliance Unit** | unit name (e.g. *Northwest Wastewater Treatment System*), unit type (Water Use Permit / Public Water Supply / Wastewater / Tank / Stormwater / Other) |
 | **Vendor** | name, mailing address, website, primary contact name and phone |
 | **Purchase Order** | PO number, status, amount, vendor, project *(optional)*, contract number, start/end dates |
 | **Invoice** | invoice number (unique per vendor), vendor, purchase order, status, amount, invoice/received/paid dates |
 | **Field Report** | project, entered by, report date, data entry date, hours on site, observation/safety/weather notes |
-| **Document** | project, subject, originating and recipient organizations, type, document date, added and last-edited timestamps |
+| **Document** | links to a project, compliance unit, PO and/or invoice; subject, originating and recipient organizations, type, document date, added and last-edited timestamps |
 
 All models use UUID primary keys and carry `created_at` / `updated_at`.
 Full field reference: [docs/data-model.md](docs/data-model.md). Planning models

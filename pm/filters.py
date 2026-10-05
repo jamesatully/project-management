@@ -3,8 +3,9 @@ FilterSets shared by the REST API and the web UI list views, so filtering
 behaves identically in both places.
 """
 import django_filters
+from django import forms
 
-from .models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 class ProjectFilter(django_filters.FilterSet):
@@ -17,6 +18,12 @@ class VendorFilter(django_filters.FilterSet):
     class Meta:
         model = Vendor
         fields = []
+
+
+class ComplianceUnitFilter(django_filters.FilterSet):
+    class Meta:
+        model = ComplianceUnit
+        fields = ["unit_type"]
 
 
 class PurchaseOrderFilter(django_filters.FilterSet):
@@ -52,7 +59,11 @@ class FieldReportFilter(django_filters.FilterSet):
 class DocumentFilter(django_filters.FilterSet):
     document_date_after = django_filters.DateFilter(field_name="document_date", lookup_expr="gte", label="From")
     document_date_before = django_filters.DateFilter(field_name="document_date", lookup_expr="lte", label="To")
+    # Thousands of invoices and hundreds of POs are too many for a dropdown; these accept a UUID
+    # (used by "View all" links on PO and invoice pages) and render as hidden inputs in the filter bar.
+    purchase_order = django_filters.UUIDFilter(widget=forms.HiddenInput)
+    invoice = django_filters.UUIDFilter(widget=forms.HiddenInput)
 
     class Meta:
         model = Document
-        fields = ["project", "document_type"]
+        fields = ["project", "compliance_unit", "document_type", "purchase_order", "invoice"]

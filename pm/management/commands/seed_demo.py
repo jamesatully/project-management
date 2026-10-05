@@ -11,10 +11,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from pm import demo
-from pm.models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from pm.models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
-# Delete order respects PROTECT foreign keys.
-MODELS = [Invoice, FieldReport, Document, PurchaseOrder, Project, Vendor]
+# Delete order respects PROTECT foreign keys (documents reference most other records).
+MODELS = [Document, Invoice, FieldReport, PurchaseOrder, Project, ComplianceUnit, Vendor]
 
 
 class Command(BaseCommand):

@@ -4,7 +4,9 @@ from django.urls import reverse
 
 from ..models import Project, Vendor
 from ..resources import REGISTRY
-from .factories import make_document, make_field_report, make_invoice, make_po, make_project, make_vendor
+from .factories import (
+    make_compliance_unit, make_document, make_field_report, make_invoice, make_po, make_project, make_vendor,
+)
 
 
 class ViewTests(TestCase):
@@ -20,6 +22,7 @@ class ViewTests(TestCase):
             "invoice": make_invoice(self.po),
             "fieldreport": make_field_report(self.project),
             "document": make_document(self.project),
+            "complianceunit": make_compliance_unit(),
         }
 
     def test_login_required(self):
@@ -57,7 +60,7 @@ class ViewTests(TestCase):
                 "name": "Bridge Retrofit",
                 "project_id": "2025-4-2-1",
                 "budget_id": "7000001",
-                "project_type": "CIP",
+                "project_type": "CIP_RR",
                 "status": "PLANNING",
                 "project_manager": "Jo Smith",
             },
@@ -68,6 +71,28 @@ class ViewTests(TestCase):
     def test_create_prefills_from_querystring(self):
         response = self.client.get(reverse("pm:fieldreport-create"), {"project": self.project.pk})
         self.assertEqual(str(response.context["form"].initial["project"]), str(self.project.pk))
+
+    def test_compliance_unit_page_lists_documents(self):
+        unit = self.objects["complianceunit"]
+        make_document(compliance_unit=unit, subject="Discharge Monitoring Report — August 2026")
+        response = self.client.get(unit.get_absolute_url())
+        self.assertContains(response, "Discharge Monitoring Report — August 2026")
+        self.assertContains(response, f"/documents/new/?compliance_unit={unit.pk}")
+
+    def test_document_list_filters_by_invoice(self):
+        invoice = self.objects["invoice"]
+        make_document(invoice=invoice, subject="Invoice returned")
+        response = self.client.get(reverse("pm:document-list"), {"invoice": invoice.pk})
+        self.assertContains(response, "Invoice returned")
+        self.assertNotContains(response, "Notice to proceed")
+
+    def test_document_form_requires_a_link(self):
+        response = self.client.post(reverse("pm:document-create"), {
+            "subject": "Orphan", "document_type": "LETTER", "document_date": "2026-01-05",
+            "originating_organization": "A", "recipient_organization": "B",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Link the document to at least one")
 
     def test_protected_delete_shows_error(self):
         vendor = self.po.vendor
