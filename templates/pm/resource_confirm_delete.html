@@ -8,7 +8,7 @@
   <p class="mt-2">You're about to permanently delete <strong class="text-ink dark:text-white">{{ object }}</strong>. This can't be undone.</p>
   <form method="post" class="mt-6 flex justify-end gap-3">
     {% csrf_token %}
-    <a href="{{ object.get_absolute_url }}" class="rounded-lg border border-stroke px-5 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Cancel</a>
+    <a href="{{ cancel_url }}" class="rounded-lg border border-stroke px-5 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Cancel</a>
     <button type="submit" class="rounded-lg bg-danger px-5 py-2.5 font-medium text-white hover:bg-danger/90">Delete</button>
   </form>
 </div>

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     # Local
     "pm",
+    "planning",
 ]
 
 MIDDLEWARE = [
@@ -138,6 +139,7 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {"LevelEnum": "planning.models.Stakeholder.Level"},
 }
 
 # --- Production hardening (active when DEBUG is off) ---------------------------

@@ -1,6 +1,7 @@
 """
 Helpers that turn model values into HTML snippets for tables and detail pages.
 """
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.template.defaultfilters import date as date_filter
 from django.template.defaultfilters import linebreaksbr
@@ -54,12 +55,31 @@ def status_badge(obj, name):
     )
 
 
+def score_badge(score):
+    """Badge for a likelihood x impact risk score (1-25): low < 8 <= medium < 15 <= high."""
+    if score >= 15:
+        color, label = "rose", "High"
+    elif score >= 8:
+        color, label = "amber", "Medium"
+    else:
+        color, label = "emerald", "Low"
+    return format_html(
+        '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {}">'
+        '<span class="tabular-nums">{}</span> · {}</span>',
+        BADGE_CLASSES[color],
+        score,
+        label,
+    )
+
+
 def infer_kind(field):
     """Pick a display kind for a model field (used on detail pages)."""
     if isinstance(field, models.ForeignKey):
         return "fk"
     if field.name == "status":
         return "status"
+    if field.name == "score":
+        return "score"
     if field.name == "amount":
         return "money"
     if isinstance(field, models.DateTimeField):
@@ -76,11 +96,14 @@ def infer_kind(field):
 
 
 def render_value(obj, name, kind="text"):
-    """Render ``obj.<name>`` as HTML according to ``kind``."""
+    """Render ``obj.<name>`` (a model field or a plain attribute/property) as HTML according to ``kind``."""
     if kind == "status":
         return status_badge(obj, name)
 
-    field = obj._meta.get_field(name)
+    try:
+        field = obj._meta.get_field(name)
+    except FieldDoesNotExist:
+        field = None
     value = getattr(obj, name)
     if value in (None, ""):
         return EMPTY
@@ -96,14 +119,28 @@ def render_value(obj, name, kind="text"):
         return money(value)
     if kind == "date":
         return date_filter(value, "M j, Y")
+    if kind == "month":
+        return date_filter(value, "M Y")
+    if kind == "days":
+        if value == 0:
+            return "On time"
+        return format_html(
+            '<span class="{}">{} day{} {}</span>',
+            "font-medium text-danger" if value > 30 else "",
+            abs(value),
+            "" if abs(value) == 1 else "s",
+            "late" if value > 0 else "early",
+        )
     if kind == "datetime":
         return date_filter(value, "M j, Y g:i A")
+    if kind == "score":
+        return score_badge(value)
     if kind == "hours":
         return f"{value.normalize():f} h"
     if kind == "url":
         return format_html('<a href="{0}" target="_blank" rel="noopener" class="text-primary hover:underline">{0}</a>', value)
     if kind == "multiline":
         return linebreaksbr(value, autoescape=True)
-    if field.choices:
+    if field is not None and field.choices:
         return getattr(obj, f"get_{name}_display")()
     return value

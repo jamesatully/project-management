@@ -27,6 +27,22 @@ Each resource supports `GET` (list), `POST` (create), and on `/<id>/`:
 | Field reports | `/api/field-reports/` | `project`, `report_date_after`, `report_date_before` | entered by, notes, project |
 | Documents | `/api/documents/` | `project`, `document_type`, `document_date_after`, `document_date_before` | subject, organizations, project |
 
+Planning (see [planning.md](planning.md)):
+
+| Resource | Path | Filters | Search covers |
+|---|---|---|---|
+| Plans | `/api/plans/` | `status`, `project` | project, problem statement, scope |
+| Objectives | `/api/objectives/` | `project`, `status` | description, success measure |
+| Risks | `/api/risks/` | `project`, `status`, `category`, `score_min` | title, description, mitigation, owner |
+| Stakeholders | `/api/stakeholders/` | `project`, `influence`, `interest` | name, organization, role |
+| Milestones | `/api/milestones/` | `project`, `status`, `planned_date_after`, `planned_date_before` | name |
+| Communication items | `/api/communication-items/` | `project`, `method`, `frequency` | purpose, audience, owner |
+| Activity notes | `/api/activity-notes/` | `project`, `note_type`, `note_date_after`, `note_date_before` | title, body, author |
+
+Risk `score`, stakeholder `engagement_strategy` and milestone `variance_days`
+are read-only computed fields. A monthly note's `period` may be any date in the
+month; it is stored as the 1st.
+
 Also on every list: `?ordering=<field>` (prefix `-` for descending) and
 `?page=<n>` (50 per page). List responses look like
 `{"count": 123, "next": "...", "previous": null, "results": [...]}`.
@@ -51,6 +67,11 @@ curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/proj
 
 # Open POs for a project, largest first
 curl -H "$H" "localhost:8000/api/purchase-orders/?project=<uuid>&status=OPEN&ordering=-amount"
+
+# Log last month's update
+curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/activity-notes/ \
+  -d '{"project": "<uuid>", "note_type": "MONTHLY", "period": "2026-09-01",
+       "author_name": "Dana Whitfield", "body": "Activities: ..."}'
 
 # Mark an invoice paid
 curl -H "$H" -H "Content-Type: application/json" -X PATCH localhost:8000/api/invoices/<uuid>/ \

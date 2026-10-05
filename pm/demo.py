@@ -284,8 +284,14 @@ def money(value):
     return Decimal(int(round(value / step)) * step).quantize(Decimal("0.01"))
 
 
+# Callables ``fn(generator, plans) -> {label: count}`` run after the core data is
+# created; other apps (e.g. planning) append to this from AppConfig.ready().
+EXTENSIONS = []
+
+
 class Generator:
     def __init__(self, seed=42, today=None, project_count=100):
+        self.seed = seed
         self.rng = random.Random(seed)
         self.today = today or datetime.date.today()
         self.project_count = project_count
@@ -661,10 +667,13 @@ class Generator:
         invoices = self.make_invoices(pos)
         reports = self.make_field_reports(plans)
         documents = self.make_documents(plans)
-        return {
+        counts = {
             "vendors": len(vendors), "projects": len(plans), "purchase orders": len(pos),
             "invoices": len(invoices), "field reports": len(reports), "documents": len(documents),
         }
+        for extension in EXTENSIONS:
+            counts.update(extension(self, plans))
+        return counts
 
 
 def generate(seed=42, today=None, project_count=100):

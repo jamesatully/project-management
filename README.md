@@ -20,6 +20,11 @@ documents. Every record is also available through a documented REST API.
   OpenAPI schema.
 - **Business rules** enforced the same way in forms and the API (e.g. an invoice's
   vendor must match its purchase order's vendor; paid invoices need a paid date).
+- **Project planning** (`planning` app): a plan per project — problem
+  statement, in/out of scope, objectives, risk register, stakeholders,
+  milestones and communication plan — plus monthly updates and other activity
+  notes. Portfolio-wide risk and milestone lists; dashboard panels for overdue
+  monthly updates and top risks. See [docs/planning.md](docs/planning.md).
 - UUID primary keys, PostgreSQL, Docker, light/dark mode, responsive layout.
 
 ## Quick start
@@ -41,8 +46,9 @@ Open <http://localhost:8000> and sign in.
 Load a fictitious water/wastewater utility dataset — about 100 projects (water
 mains, sewer rehab, treatment plant upgrades, reservoirs, studies,
 environmental and developer projects), 10 project managers, 50 vendors, ~250
-purchase orders, several thousand monthly invoices, and project field reports
-and correspondence:
+purchase orders, several thousand monthly invoices, project field reports and
+correspondence, and a plan for nearly every project with objectives, risks,
+stakeholders, milestones, a communication plan and monthly updates:
 
 ```bash
 docker compose exec web python manage.py seed_demo           # into an empty database
@@ -58,6 +64,8 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 |---|---|
 | `/` | Dashboard |
 | `/projects/`, `/vendors/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
+| `/projects/<id>/plan/`, `/projects/<id>/activity/` | A project's plan and activity notes |
+| `/plans/`, `/risks/`, `/milestones/`, `/activity/` | Planning lists across all projects |
 | `/api/` | Browsable REST API |
 | `/api/docs/` | Swagger UI |
 | `/api/redoc/` | ReDoc |
@@ -83,7 +91,9 @@ Project ──< (optional) PurchaseOrder
 | **Document** | project, subject, originating and recipient organizations, type, document date, added and last-edited timestamps |
 
 All models use UUID primary keys and carry `created_at` / `updated_at`.
-Full field reference: [docs/data-model.md](docs/data-model.md).
+Full field reference: [docs/data-model.md](docs/data-model.md). Planning models
+(plans, objectives, risks, stakeholders, milestones, communication items,
+activity notes) are described in [docs/planning.md](docs/planning.md).
 
 ## API
 
@@ -99,7 +109,7 @@ See [docs/api.md](docs/api.md) for endpoints, filters and examples.
 ## Development
 
 ```bash
-docker compose exec web python manage.py test pm        # run tests
+docker compose exec web python manage.py test pm planning  # run tests
 docker compose exec web python manage.py makemigrations # after model changes
 docker compose logs -f web                              # server logs
 ```
