@@ -1,0 +1,38 @@
+{# A card holding a compact table built by pm.views.build_table. Optional: table.title, table.add_url, table.all_url, table.empty_text. #}
+<section class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="flex items-center justify-between gap-4 px-6 pt-6">
+    <h3 class="font-semibold text-ink dark:text-white">{{ table.title|default:table.resource.verbose_name_plural }} <span class="ml-1 font-normal text-bodydark2">({{ table.count }})</span></h3>
+    <div class="flex items-center gap-4">
+      {% if table.all_url and table.count > table.rows|length %}<a href="{{ table.all_url }}" class="text-sm font-medium text-primary hover:underline">View all</a>{% endif %}
+      {% if table.add_url %}
+      <a href="{{ table.add_url }}" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Add
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-left">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>
+          {% for col in table.columns %}<th class="whitespace-nowrap px-6 py-3 font-medium {% if col.kind == 'money' or col.kind == 'hours' %}text-right{% endif %}">{{ col.label }}</th>{% endfor %}
+          <th class="px-4 py-3"><span class="sr-only">Edit</span></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for row in table.rows %}
+        <tr class="align-top hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+          {% for col, cell in row.cells %}
+          <td class="px-6 py-3 {% if col.kind == 'text' or col.kind == 'link' %}min-w-[10rem]{% else %}whitespace-nowrap{% endif %} {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
+          {% endfor %}
+          <td class="px-4 py-3 text-right">
+            <a href="{{ row.edit_url }}" class="inline-flex text-bodydark2 hover:text-primary" title="Edit" aria-label="Edit">{% include "partials/icon.html" with name="pencil" size="h-4 w-4" %}</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ table.columns|length|add:1 }}" class="px-6 py-6 text-center">{{ table.empty_text|default:"None yet." }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

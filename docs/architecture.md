@@ -4,7 +4,7 @@
 
 ```
 config/            Django project: settings (env-driven), root URLs, WSGI/ASGI
-pm/                The single Django app
+pm/                Core app: records, generic UI, extension points
   models.py        Domain models (see data-model.md)
   filters.py       django-filter FilterSets — shared by API and web UI
   forms.py         ModelForms with Tailwind styling
@@ -14,6 +14,8 @@ pm/                The single Django app
   display.py       Value → HTML rendering (money, dates, status badges, links)
   api/             DRF serializers, viewsets, router
   tests/           Model, API and view tests
+planning/          Project plans and activity notes (see planning.md);
+                   plugs into pm via the hooks below
 templates/         base layout, dashboard, generic resource pages, login
 docs/              This documentation
 ```
@@ -35,6 +37,23 @@ docs/              This documentation
   Field reports and documents cascade with their project.
 - **UUID primary keys** everywhere; human identifiers (project ID, PO number,
   invoice number) are separate, user-editable fields.
+
+## Extension points
+
+`pm` exposes a few hooks so feature apps can extend the UI without `pm`
+importing them (the `planning` app is the first user):
+
+- `pm.resources.register(resource)` — add a model to the generic CRUD stack
+  and, via `nav_group`, to the sidebar.
+- `pm.resources.register_tab(resource_key, Tab(label, url_name))` — add a tab
+  to a detail page (project pages get *Plan* and *Activity*).
+- `pm.resources.register_dashboard_panel(fn)` — `fn(request)` returns a dict
+  with a `template` to render at the end of the dashboard.
+- `pm.demo.EXTENSIONS` — add demo data generation to `seed_demo`.
+- Generic forms honour `?field=value` (pre-fill) and `?next=<local url>`
+  (redirect after save/delete); `pm.views.build_table` renders compact tables.
+
+Apps register from `AppConfig.ready()`.
 
 ## Front end
 

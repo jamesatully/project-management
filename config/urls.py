@@ -10,10 +10,12 @@ urlpatterns = [
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     # API
     path("api/", include("pm.api.urls")),
+    path("api/", include("planning.api.urls")),
     path("api/auth/token/", obtain_auth_token, name="api-token"),
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="api-schema"), name="api-docs"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="api-schema"), name="api-redoc"),
     # Web UI
+    path("", include("planning.urls")),
     path("", include("pm.urls")),
 ]

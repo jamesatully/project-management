@@ -86,7 +86,11 @@
             {% include "partials/icon.html" with name="grid" %} Dashboard
           </a>
         </li>
-        {% for item in nav_items %}
+      </ul>
+      {% for group in nav_groups %}
+      <p class="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-bodydark2">{{ group.label }}</p>
+      <ul class="space-y-1">
+        {% for item in group.items %}
         <li>
           <a href="{{ item.url }}"
              class="flex items-center gap-3 rounded-md px-3 py-2 font-medium {% if active_nav == item.key %}bg-white/10 text-white{% else %}text-bodydark hover:bg-white/5 hover:text-white{% endif %}">
@@ -95,6 +99,7 @@
         </li>
         {% endfor %}
       </ul>
+      {% endfor %}
       <p class="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-bodydark2">Developer</p>
       <ul class="space-y-1">
         <li><a href="{% url 'api-docs' %}" class="flex items-center gap-3 rounded-md px-3 py-2 font-medium text-bodydark hover:bg-white/5 hover:text-white">{% include "partials/icon.html" with name="code" %} API docs</a></li>
@@ -106,7 +111,7 @@
   </aside>
 
   {# ---------- Main column ---------- #}
-  <div class="flex flex-1 flex-col overflow-y-auto">
+  <div class="relative flex flex-1 flex-col overflow-y-auto">
     <header class="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-stroke bg-white px-4 py-4 dark:border-strokedark dark:bg-boxdark md:px-6">
       <div class="flex items-center gap-3">
         <button @click="sidebarOpen = true" class="rounded-md border border-stroke p-1.5 dark:border-strokedark lg:hidden" aria-label="Open menu">

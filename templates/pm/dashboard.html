@@ -130,5 +130,8 @@
       {% endfor %}
     </ul>
   </section>
+
+  {# Panels contributed by other apps (see pm.resources.register_dashboard_panel). #}
+  {% for panel in panels %}{% include panel.template %}{% endfor %}
 </div>
 {% endblock %}

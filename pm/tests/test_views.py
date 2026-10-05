@@ -39,7 +39,8 @@ class ViewTests(TestCase):
                 with self.subTest(resource=key, view=name):
                     response = self.client.get(reverse(f"pm:{key}-{name}", args=args))
                     self.assertEqual(response.status_code, 200)
-        self.assertEqual(set(self.objects), set(REGISTRY))
+        pm_resources = {key for key, r in REGISTRY.items() if r.model._meta.app_label == "pm"}
+        self.assertEqual(set(self.objects), pm_resources)
 
     def test_list_search_filter_and_sort(self):
         make_project(project_id="2023-1-1-0", name="Harbor Dredging", status="COMPLETE")

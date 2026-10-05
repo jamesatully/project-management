@@ -8,10 +8,16 @@ views in :mod:`pm.views` and the shared templates render entirely from this
 configuration, so adding a model to the UI is mostly a matter of adding an
 entry here.
 
+Other apps extend the UI without ``pm`` importing them: call :func:`register`,
+:func:`register_tab` and :func:`register_dashboard_panel` from their
+``AppConfig.ready()`` (see ``planning/apps.py``).
+
 Column ``kind`` values (rendered by ``pm.templatetags.pm_tags.cell``):
 ``link`` (links to the detail page), ``text``, ``money``, ``date``,
 ``status`` (coloured badge), ``fk`` (links to the related object's page),
-``hours``.
+``hours``, ``score`` (1-25 risk score badge), ``month`` (e.g. "Sep 2026"),
+``days`` (signed day variance). A column may name a model property instead of
+a field; such columns are not sortable.
 """
 from dataclasses import dataclass, field
 
@@ -36,6 +42,14 @@ class Related:
 
 
 @dataclass(frozen=True)
+class Tab:
+    """An extra tab on a resource's detail page, e.g. "Plan" on projects."""
+
+    label: str
+    url_name: str  # reversed with the object's pk
+
+
+@dataclass(frozen=True)
 class Resource:
     key: str  # URL slug and url-name prefix
     model: type
@@ -48,6 +62,8 @@ class Resource:
     related: list = field(default_factory=list)
     # Fields shown on the detail page; defaults to every concrete field.
     detail_fields: list = field(default_factory=list)
+    url_prefix: str = ""  # e.g. "projects" -> /projects/
+    nav_group: str | None = "Records"  # sidebar heading; None hides it from the sidebar
 
     @property
     def verbose_name(self):
@@ -63,6 +79,7 @@ REGISTRY = {
     for r in [
         Resource(
             key="project",
+            url_prefix="projects",
             model=Project,
             form_class=forms.ProjectForm,
             filterset_class=filters.ProjectFilter,
@@ -84,6 +101,7 @@ REGISTRY = {
         ),
         Resource(
             key="purchaseorder",
+            url_prefix="purchase-orders",
             model=PurchaseOrder,
             form_class=forms.PurchaseOrderForm,
             filterset_class=filters.PurchaseOrderFilter,
@@ -103,6 +121,7 @@ REGISTRY = {
         ),
         Resource(
             key="invoice",
+            url_prefix="invoices",
             model=Invoice,
             form_class=forms.InvoiceForm,
             filterset_class=filters.InvoiceFilter,
@@ -121,6 +140,7 @@ REGISTRY = {
         ),
         Resource(
             key="fieldreport",
+            url_prefix="field-reports",
             model=FieldReport,
             form_class=forms.FieldReportForm,
             filterset_class=filters.FieldReportFilter,
@@ -137,6 +157,7 @@ REGISTRY = {
         ),
         Resource(
             key="document",
+            url_prefix="documents",
             model=Document,
             form_class=forms.DocumentForm,
             filterset_class=filters.DocumentFilter,
@@ -154,6 +175,7 @@ REGISTRY = {
         ),
         Resource(
             key="vendor",
+            url_prefix="vendors",
             model=Vendor,
             form_class=forms.VendorForm,
             filterset_class=filters.VendorFilter,
@@ -172,3 +194,24 @@ REGISTRY = {
         ),
     ]
 }
+
+
+# resource key -> extra detail-page tabs (the "Overview" tab is implicit).
+DETAIL_TABS = {}
+
+# Callables ``fn(request) -> dict | None``; a dict must include "template" and
+# is passed to that template as ``panel``. Rendered at the end of the dashboard.
+DASHBOARD_PANELS = []
+
+
+def register(resource):
+    """Add a resource (generic list/detail/create/edit/delete pages and API-style filtering)."""
+    REGISTRY[resource.key] = resource
+
+
+def register_tab(resource_key, tab):
+    DETAIL_TABS.setdefault(resource_key, []).append(tab)
+
+
+def register_dashboard_panel(fn):
+    DASHBOARD_PANELS.append(fn)

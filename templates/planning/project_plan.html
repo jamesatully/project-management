@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load pm_tags %}
+{% block title %}Plan · {{ project }}{% endblock %}
+{% block page_title %}Project{% endblock %}
+
+{% block content %}
+{% include "partials/detail_header.html" with back_label="All projects" title=project %}
+
+{# ---------- Plan narrative ---------- #}
+<section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark">
+  {% if plan %}
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <div class="flex items-center gap-3">
+        <h3 class="text-lg font-semibold text-ink dark:text-white">Project Plan</h3>
+        {{ plan|status_badge }}
+      </div>
+      <p class="mt-1 text-xs text-bodydark2">
+        {% if plan.status == "APPROVED" %}Approved by {{ plan.approved_by }} on {{ plan.approved_date|date:"M j, Y" }} · {% endif %}Last updated {{ plan.updated_at|date:"M j, Y" }}
+      </p>
+    </div>
+    <a href="{{ plan_edit_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-stroke px-4 py-2 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">
+      {% include "partials/icon.html" with name="pencil" size="h-4 w-4" %} Edit plan
+    </a>
+  </div>
+
+  <div class="mt-6">
+    <h4 class="text-xs font-semibold uppercase tracking-wide text-bodydark2">Problem statement</h4>
+    <div class="mt-2 max-w-4xl leading-relaxed text-ink dark:text-white">{{ plan.problem_statement|default:"—"|linebreaksbr }}</div>
+  </div>
+  <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="rounded-md border border-stroke p-4 dark:border-strokedark">
+      <h4 class="text-xs font-semibold uppercase tracking-wide text-bodydark2">In scope</h4>
+      <div class="mt-2 leading-relaxed text-ink dark:text-white">{{ plan.scope_in|default:"—"|linebreaksbr }}</div>
+    </div>
+    <div class="rounded-md border border-dashed border-stroke p-4 dark:border-strokedark">
+      <h4 class="text-xs font-semibold uppercase tracking-wide text-bodydark2">Out of scope</h4>
+      <div class="mt-2 leading-relaxed text-ink dark:text-white">{{ plan.scope_out|default:"—"|linebreaksbr }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="py-6 text-center">
+    <h3 class="text-lg font-semibold text-ink dark:text-white">No plan yet</h3>
+    <p class="mx-auto mt-1 max-w-md">Start with the problem statement and scope. Objectives, risks, stakeholders, milestones and the communication plan can be added below at any time.</p>
+    <a href="{{ plan_create_url }}" class="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-primary/90">
+      {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Start plan
+    </a>
+  </div>
+  {% endif %}
+</section>
+
+{# ---------- Jump links ---------- #}
+<nav class="mt-6 flex flex-wrap gap-2" aria-label="Plan sections">
+  {% for table in sections %}
+  <a href="#{{ table.anchor }}" class="rounded-full border border-stroke bg-white px-3 py-1 text-xs font-medium hover:border-primary hover:text-primary dark:border-strokedark dark:bg-boxdark">
+    {{ table.title }} <span class="text-bodydark2">{{ table.count }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+{# ---------- Structured sections ---------- #}
+{% for table in sections %}
+<div id="{{ table.anchor }}" class="mt-6 scroll-mt-24">{% include "partials/table_card.html" %}</div>
+{% endfor %}
+{% endblock %}

@@ -17,14 +17,53 @@ from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import generic
 
 from . import display
 from .forms import INPUT_CLASSES
 from .models import Document, FieldReport, Invoice, Project, PurchaseOrder
-from .resources import REGISTRY
+from .resources import DASHBOARD_PANELS, DETAIL_TABS, REGISTRY, Tab
 
 ZERO = Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+
+
+def safe_next(request):
+    """The ``?next=`` URL if it points back into this site, else None."""
+    url = request.GET.get("next")
+    if url and url_has_allowed_host_and_scheme(url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return url
+    return None
+
+
+def detail_tabs(resource_key, obj, active_url_name):
+    """Tabs for a detail page: an implicit "Overview" plus any registered by other apps."""
+    tabs = [Tab("Overview", f"pm:{resource_key}-detail"), *DETAIL_TABS.get(resource_key, [])]
+    if len(tabs) == 1:
+        return []
+    return [
+        {"label": t.label, "url": reverse(t.url_name, args=[obj.pk]), "active": t.url_name == active_url_name}
+        for t in tabs
+    ]
+
+
+def build_table(resource, queryset, exclude=(), limit=25, next_url=None):
+    """Rows for a compact table of ``resource`` records (used on detail pages and plan tabs)."""
+    columns = [c for c in resource.columns if c.name not in exclude]
+    qs = queryset.select_related(*resource.select_related)
+    suffix = f"?{urlencode({'next': next_url})}" if next_url else ""
+    return {
+        "resource": resource,
+        "columns": columns,
+        "count": qs.count(),
+        "rows": [
+            {
+                "cells": [(c, display.render_value(o, c.name, c.kind)) for c in columns],
+                "edit_url": reverse(f"pm:{resource.key}-update", args=[o.pk]) + suffix,
+            }
+            for o in qs[:limit]
+        ],
+    }
 
 
 class DashboardView(LoginRequiredMixin, generic.TemplateView):
@@ -112,6 +151,7 @@ class DashboardView(LoginRequiredMixin, generic.TemplateView):
         ctx["recent_reports"] = FieldReport.objects.select_related("project")[:5]
         ctx["recent_documents"] = Document.objects.select_related("project")[:5]
         ctx["pending_invoices"] = pending.select_related("vendor", "purchase_order").order_by("invoice_date")[:6]
+        ctx["panels"] = [panel for panel in (fn(self.request) for fn in DASHBOARD_PANELS) if panel]
         return ctx
 
 
@@ -159,7 +199,7 @@ class ResourceListView(ResourceMixin, generic.ListView):
             qs = qs.filter(reduce(or_, (Q(**{f"{f}__icontains": self.query}) for f in self.resource.search_fields)))
 
         # Sorting is limited to the displayed columns: ?o=amount or ?o=-amount.
-        sortable = {c.name for c in self.resource.columns}
+        sortable = {c.name for c in self.resource.columns} & {f.name for f in self.model._meta.concrete_fields}
         self.ordering_param = self.request.GET.get("o", "")
         if self.ordering_param.lstrip("-") in sortable:
             qs = qs.order_by(self.ordering_param)
@@ -205,21 +245,15 @@ class ResourceDetailView(ResourceMixin, generic.DetailView):
             }
             for f in fields
         ]
+        here = self.request.path
         ctx["related_tables"] = []
         for rel in self.resource.related:
             child = REGISTRY[rel.resource]
-            columns = [c for c in child.columns if c.name != rel.fk_name]
-            qs = getattr(obj, rel.accessor).select_related(*child.select_related)
-            ctx["related_tables"].append(
-                {
-                    "resource": child,
-                    "columns": columns,
-                    "count": qs.count(),
-                    "rows": [[(c, display.render_value(o, c.name, c.kind)) for c in columns] for o in qs[:25]],
-                    "add_url": f"{reverse(f'pm:{child.key}-create')}?{rel.fk_name}={obj.pk}",
-                    "all_url": f"{reverse(f'pm:{child.key}-list')}?{rel.fk_name}={obj.pk}",
-                }
-            )
+            table = build_table(child, getattr(obj, rel.accessor).all(), exclude=[rel.fk_name], next_url=here)
+            table["add_url"] = f"{reverse(f'pm:{child.key}-create')}?{urlencode({rel.fk_name: obj.pk, 'next': here})}"
+            table["all_url"] = f"{reverse(f'pm:{child.key}-list')}?{rel.fk_name}={obj.pk}"
+            ctx["related_tables"].append(table)
+        ctx["tabs"] = detail_tabs(self.resource.key, obj, f"pm:{self.resource.key}-detail")
         ctx["edit_url"] = self.url("update", obj.pk)
         ctx["delete_url"] = self.url("delete", obj.pk)
         ctx["list_url"] = self.url("list")
@@ -232,6 +266,10 @@ class ResourceFormMixin(ResourceMixin):
     def get_form_class(self):
         return self.resource.form_class
 
+    def get_success_url(self):
+        # ?next= lets callers (e.g. the project Plan tab) bring the user back where they started.
+        return safe_next(self.request) or super().get_success_url()
+
     def form_valid(self, form):
         response = super().form_valid(form)
         verb = "updated" if self.is_update else "created"
@@ -241,7 +279,9 @@ class ResourceFormMixin(ResourceMixin):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["is_update"] = self.is_update
-        ctx["cancel_url"] = self.object.get_absolute_url() if self.is_update else self.url("list")
+        ctx["cancel_url"] = safe_next(self.request) or (
+            self.object.get_absolute_url() if self.is_update else self.url("list")
+        )
         return ctx
 
 
@@ -264,7 +304,12 @@ class ResourceDeleteView(ResourceMixin, generic.DeleteView):
     template_name = "pm/resource_confirm_delete.html"
 
     def get_success_url(self):
-        return self.url("list")
+        return safe_next(self.request) or self.url("list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["cancel_url"] = safe_next(self.request) or self.object.get_absolute_url()
+        return ctx
 
     def form_valid(self, form):
         name = str(self.object)

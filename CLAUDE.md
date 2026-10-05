@@ -16,7 +16,7 @@ reload automatically.
 
 ```bash
 docker compose up -d --build                            # start (http://localhost:8000)
-docker compose exec web python manage.py test pm        # tests — run after every change
+docker compose exec web python manage.py test pm planning  # tests — run after every change
 docker compose exec web python manage.py makemigrations pm
 docker compose exec web python manage.py migrate
 docker compose logs -f web
@@ -39,7 +39,12 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - `pm/demo.py` — demo-data generator (fictitious water/wastewater utility);
   `pm/management/commands/seed_demo.py` wraps it. When models change, update
   the generator so `seed_demo` keeps working (covered by `pm/tests/test_seed.py`).
-- `docs/` — data-model.md, api.md, architecture.md.
+- `planning/` — project plans (problem statement, scope, objectives, risks,
+  stakeholders, milestones, communication plan) and activity notes. Separate
+  app that plugs into pm through hooks in `pm/resources.py` and `pm/demo.py`,
+  registered in `planning/resources.py` / `planning/demo.py`. **pm must never
+  import planning.** See docs/planning.md.
+- `docs/` — data-model.md, api.md, architecture.md, planning.md.
 
 ## Conventions
 
@@ -48,6 +53,9 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - When changing a model: update the form field list, serializer `fields`,
   FilterSet, `resources.py` entry, admin, **docs/data-model.md**, and tests.
 - When adding an API filter or endpoint, update **docs/api.md**.
+- New feature areas go in their own app and extend pm through its hooks
+  (`register`, `register_tab`, `register_dashboard_panel`, `demo.EXTENSIONS`)
+  rather than editing pm templates/views directly.
 - Money is `DecimalField(max_digits=14, decimal_places=2)`; render with
   `display.money` / the `money` template filter.
 - Styling: Tailwind utility classes with the custom tokens defined in

@@ -1,6 +1,6 @@
 """
 Web UI routes. One list/create/detail/update/delete set is generated for each
-entry in the resource registry, e.g. ``pm:project-list`` → ``/projects/``.
+entry in the resource registry (including resources other apps register), e.g. ``pm:project-list`` → ``/projects/``.
 """
 from django.urls import path
 
@@ -9,19 +9,10 @@ from .resources import REGISTRY
 
 app_name = "pm"
 
-URL_PREFIXES = {
-    "project": "projects",
-    "purchaseorder": "purchase-orders",
-    "invoice": "invoices",
-    "fieldreport": "field-reports",
-    "document": "documents",
-    "vendor": "vendors",
-}
-
 urlpatterns = [path("", views.DashboardView.as_view(), name="dashboard")]
 
-for key in REGISTRY:
-    prefix = URL_PREFIXES[key]
+for key, resource in REGISTRY.items():
+    prefix = resource.url_prefix
     urlpatterns += [
         path(f"{prefix}/", views.ResourceListView.as_view(resource_key=key), name=f"{key}-list"),
         path(f"{prefix}/new/", views.ResourceCreateView.as_view(resource_key=key), name=f"{key}-create"),
