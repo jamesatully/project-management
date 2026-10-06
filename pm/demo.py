@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 UTILITY = "Riverbend Water & Sewer Utility"
 
@@ -42,28 +42,32 @@ BUSINESS_PARKS = ["Gateway Business Park", "Riverbend Logistics Center", "Northp
 RESERVOIRS = ["Hilltop", "Summit", "Ridgeview", "Crestline", "Pinecrest", "Valley View"]
 BASINS = ["Basin A", "Basin C", "Basin F", "Mill Creek Basin", "Northside Basin", "Old Town Basin"]
 
-# Project templates by category: (template, needs construction?)
+# Project templates by category. "type" is the default project type; names listed in
+# "expansion" (new capacity or new treatment) are CIP Expansion instead.
+RR, EXPANSION = Project.ProjectType.CIP_RR, Project.ProjectType.CIP_EXPANSION
 CATEGORIES = {
     "water_main": {
-        "count": 18, "type": Project.ProjectType.CIP, "budgets": ["6822015", "6822016", "6822031"],
+        "count": 18, "type": RR, "budgets": ["6822015", "6822016", "6822031"],
         "construction": (800_000, 6_000_000),
         "names": [
             "{street} Water Main Replacement", "{area} Distribution Main Upgrade — Phase {n}",
             "{street} 16-inch Transmission Main", "{area} Cast Iron Main Replacement",
             "{street} Water Main and Service Renewal",
         ],
+        "expansion": ["{area} Distribution Main Upgrade — Phase {n}", "{street} 16-inch Transmission Main"],
     },
     "sewer": {
-        "count": 18, "type": Project.ProjectType.CIP, "budgets": ["6833010", "6833011", "6833027"],
+        "count": 18, "type": RR, "budgets": ["6833010", "6833011", "6833027"],
         "construction": (400_000, 4_500_000),
         "names": [
             "{street} Sanitary Sewer Rehabilitation", "{area} Trunk Sewer CIPP Lining",
             "Lift Station {k} Replacement", "{area} Force Main Replacement",
             "{basin} Manhole Rehabilitation", "{street} Sewer Capacity Upgrade",
         ],
+        "expansion": ["{street} Sewer Capacity Upgrade"],
     },
     "plant": {
-        "count": 18, "type": Project.ProjectType.CIP, "budgets": ["6844001", "6844002", "6844019"],
+        "count": 18, "type": RR, "budgets": ["6844001", "6844002", "6844019"],
         "construction": (1_500_000, 24_000_000),
         "names": [
             "{wwtp} Aeration System Upgrade", "{wwtp} Headworks Screening Improvements",
@@ -72,18 +76,20 @@ CATEGORIES = {
             "{wtp} Ozone System Replacement", "{wtp} Clearwell Seismic Retrofit",
             "{plant} Electrical Switchgear Replacement", "{plant} SCADA Modernization",
         ],
+        "expansion": ["{wwtp} Aeration System Upgrade"],
     },
     "storage": {
-        "count": 10, "type": Project.ProjectType.CIP, "budgets": ["6822040", "6822041"],
+        "count": 10, "type": RR, "budgets": ["6822040", "6822041"],
         "construction": (500_000, 5_000_000),
         "names": [
             "{reservoir} Reservoir Recoating", "{reservoir} Elevated Tank Rehabilitation",
             "{reservoir} Booster Pump Station Replacement", "Well No. {k} Rehabilitation",
             "Well Field {k} PFAS Treatment",
         ],
+        "expansion": ["Well Field {k} PFAS Treatment"],
     },
     "study": {
-        "count": 14, "type": Project.ProjectType.CIP, "budgets": ["6850100", "6850101"],
+        "count": 14, "type": RR, "budgets": ["6850100", "6850101"],
         "construction": None,
         "names": [
             "Water System Master Plan Update", "Sewer Collection System Hydraulic Model Update",
@@ -94,9 +100,13 @@ CATEGORIES = {
             "Wastewater Facilities Plan", "Water Loss Audit and AMI Business Case",
             "Pump Station Energy Efficiency Study", "Recycled Water Feasibility Study",
         ],
+        "expansion": [
+            "Water System Master Plan Update", "Nutrient Removal Feasibility Study — {wwtp}",
+            "Wastewater Facilities Plan", "Recycled Water Feasibility Study",
+        ],
     },
     "environmental": {
-        "count": 12, "type": Project.ProjectType.ENVIRONMENTAL, "budgets": ["6860020", "6860021"],
+        "count": 12, "type": RR, "budgets": ["6860020", "6860021"],
         "construction": (200_000, 2_000_000),
         "names": [
             "{creek} Outfall Stream Restoration", "{creek} Wetland Mitigation Monitoring",
@@ -254,6 +264,72 @@ DOC_SUBJECTS = {
                                    "Condition Assessment Report", "Draft Final Report", "Monthly Progress Report"],
     Document.DocumentType.DRAWING: ["90% Design Drawings", "Issued for Construction Drawings", "Record Drawings"],
 }
+# Regulated systems and permits. Plant/reservoir names match the project name pools above.
+CU = ComplianceUnit.UnitType
+COMPLIANCE_UNITS = [
+    ("Northwest Wastewater Treatment System", CU.WASTEWATER),
+    ("South Valley Wastewater Reclamation System", CU.WASTEWATER),
+    ("Eastgate Wastewater Treatment System", CU.WASTEWATER),
+    ("Central Regional Potable Water System", CU.PUBLIC_WATER_SUPPLY),
+    ("North Fork Public Water System", CU.PUBLIC_WATER_SUPPLY),
+    ("Riverbend Consolidated Water Use Permit", CU.WATER_USE_PERMIT),
+    ("North Fork Wellfield Water Use Permit", CU.WATER_USE_PERMIT),
+    *[(f"{name} Reservoir", CU.TANK) for name in RESERVOIRS],
+    ("Municipal Separate Storm Sewer System (MS4)", CU.STORMWATER),
+    ("Treatment Plant Industrial Stormwater Program", CU.STORMWATER),
+    ("Biosolids Land Application Program", CU.OTHER),
+    ("Recycled Water Distribution System", CU.OTHER),
+]
+PLANT_UNITS = {
+    "Riverbend WWTP": "Northwest Wastewater Treatment System",
+    "South Valley WRF": "South Valley Wastewater Reclamation System",
+    "Eastgate WWTP": "Eastgate Wastewater Treatment System",
+    "Cedar Point WTP": "Central Regional Potable Water System",
+    "North Fork WTP": "North Fork Public Water System",
+}
+WATER_RESOURCES_AGENCY = "State Water Resources Department"
+UNIT_AGENCY = {
+    CU.WASTEWATER: "State Department of Environmental Quality",
+    CU.STORMWATER: "State Department of Environmental Quality",
+    CU.OTHER: "State Department of Environmental Quality",
+    CU.PUBLIC_WATER_SUPPLY: "County Health Department — Drinking Water Program",
+    CU.TANK: "County Health Department — Drinking Water Program",
+    CU.WATER_USE_PERMIT: WATER_RESOURCES_AGENCY,
+}
+# Recurring compliance records per unit type: (subject, document type, schedule, sent to the agency?).
+# Schedules: "annual" (for the prior year), "triennial", "monthly" (last six months), "once".
+DT_ = Document.DocumentType
+COMPLIANCE_RECORDS = {
+    CU.WASTEWATER: [
+        ("Discharge Monitoring Report — {month}", DT_.REPORT, "monthly", True),
+        ("Annual Pretreatment Program Report {year}", DT_.REPORT, "annual", True),
+        ("NPDES Permit Renewal Application", DT_.REPORT, "once", True),
+        ("Compliance Inspection Findings", DT_.LETTER, "triennial", False),
+    ],
+    CU.PUBLIC_WATER_SUPPLY: [
+        ("Monthly Operating Report — {month}", DT_.REPORT, "monthly", True),
+        ("Consumer Confidence Report {year}", DT_.REPORT, "annual", True),
+        ("Lead and Copper Sampling Results {year}", DT_.REPORT, "annual", True),
+        ("Sanitary Survey Report", DT_.REPORT, "triennial", False),
+    ],
+    CU.WATER_USE_PERMIT: [
+        ("Annual Water Use Report {year}", DT_.REPORT, "annual", True),
+        ("Water Use Permit Renewal", DT_.LETTER, "once", False),
+    ],
+    CU.TANK: [
+        ("Storage Tank Inspection Report", DT_.REPORT, "triennial", True),
+    ],
+    CU.STORMWATER: [
+        ("Stormwater Annual Report {year}", DT_.REPORT, "annual", True),
+        ("Stormwater Management Plan Update", DT_.REPORT, "once", True),
+    ],
+    CU.OTHER: [
+        ("Annual Program Report {year}", DT_.REPORT, "annual", True),
+    ],
+}
+INVOICE_RETURN_REASONS = ["missing backup documentation", "quantities exceed approved schedule of values",
+                          "missing lien releases", "incorrect PO number"]
+
 AGENCIES = ["State Department of Environmental Quality", "County Health Department — Drinking Water Program",
             "City of Riverbend Planning Department", "County Public Works", "State Fish and Wildlife Agency"]
 
@@ -269,6 +345,8 @@ class Plan:
     contractor: Vendor = None
     construction_start: datetime.date = None
     construction_end: datetime.date = None
+    design_po: PurchaseOrder = None
+    construction_po: PurchaseOrder = None
 
 
 def add_months(d, months):
@@ -365,7 +443,8 @@ class Generator:
             count = round(spec["count"] * self.project_count / total)
             for _ in range(count):
                 for _attempt in range(50):
-                    name = self.fill(self.pick(spec["names"]))
+                    template = self.pick(spec["names"])
+                    name = self.fill(template)
                     if name not in used_names:
                         break
                 used_names.add(name)
@@ -379,7 +458,7 @@ class Generator:
                     name=name,
                     project_id=pid,
                     budget_id=self.pick(spec["budgets"]),
-                    project_type=spec["type"],
+                    project_type=EXPANSION if template in spec.get("expansion", ()) else spec["type"],
                     status=self.status_for(start, category),
                     project_manager=pm_deck.pop() if pm_deck else self.pick(PROJECT_MANAGERS),
                 )
@@ -443,6 +522,7 @@ class Generator:
                 design_status = PurchaseOrder.Status.OPEN  # design still running past original end date
                 design_end = add_months(self.today, self.rng.randint(2, 9))
             pos.append(self.new_po(plan.design_vendor, design_value, plan.start, design_end, design_status, project))
+            plan.design_po = pos[-1]
 
             if const_range and status in (S.CONSTRUCTION, S.COMPLETE):
                 plan.contractor = self.pick(self.vendors["contractor"] if plan.category != "environmental"
@@ -458,6 +538,7 @@ class Generator:
                 c_status = self.po_status(plan.construction_start, plan.construction_end, status)
                 pos.append(self.new_po(plan.contractor, const_value, plan.construction_start,
                                        plan.construction_end, c_status, project))
+                plan.construction_po = pos[-1]
                 # Construction management / inspection and materials testing.
                 cm_vendor = self.pick([v for v in self.vendors["engineering"] if v != plan.design_vendor])
                 pos.append(self.new_po(cm_vendor, const_value * self.rng.uniform(0.05, 0.09), plan.construction_start,
@@ -477,6 +558,7 @@ class Generator:
             po = self.new_po(self.pick(self.vendors[category]), value * self.rng.uniform(0.8, 1.3), start, end,
                              self.po_status(start, end, None))
             po.contract_number = f"BPO-{start.year}-{self.rng.randint(1, 40):02d}"
+            po.description = description  # used for its award letter
             pos.append(po)
 
         for po in pos:
@@ -590,10 +672,45 @@ class Generator:
         return reports
 
     # -- documents -------------------------------------------------------------
-    def make_documents(self, plans):
+    # -- compliance units --------------------------------------------------------
+    def make_compliance_units(self):
+        units = [ComplianceUnit(name=name, unit_type=unit_type) for name, unit_type in COMPLIANCE_UNITS]
+        ComplianceUnit.objects.bulk_create(units)
+        self.units = {u.name: u for u in units}
+        return units
+
+    def unit_for(self, plan):
+        """The compliance unit a project's regulatory correspondence relates to, if any."""
+        name = plan.project.name
+        for plant, unit in PLANT_UNITS.items():
+            if plant in name:
+                return self.units[unit]
+        for reservoir in RESERVOIRS:
+            if name.startswith(reservoir):
+                return self.units[f"{reservoir} Reservoir"]
+        if name.startswith("Well"):
+            return self.units["North Fork Wellfield Water Use Permit"]
+        if plan.category == "water_main":
+            return self.units["Central Regional Potable Water System"]
+        if plan.category == "sewer":
+            return self.units[self.pick([u for p, u in PLANT_UNITS.items() if "WTP" not in p])]
+        if plan.category == "environmental":
+            return self.units["Municipal Separate Storm Sewer System (MS4)"]
+        return None
+
+    # -- documents -------------------------------------------------------------
+    def make_documents(self, plans, pos, invoices):
         DT = Document.DocumentType
         docs, stamps = [], []
+
+        def add(doc, added_on):
+            docs.append(doc)
+            added = min(added_on, self.today)
+            edited = added + datetime.timedelta(days=self.rng.choice([0, 0, 0, 1, 4, 12]))
+            stamps.append((added, min(edited, self.today)))
+
         for plan in plans:
+            unit = self.unit_for(plan)
             in_construction = plan.construction_start is not None
             types = [DT.LETTER, DT.MEMO, DT.EMAIL, DT.MEETING_MINUTES, DT.REPORT]
             if in_construction:
@@ -630,14 +747,87 @@ class Generator:
                 if doc_type == DT.EMAIL and self.rng.random() < 0.4:
                     origin, recipient = recipient, origin
 
+                # Besides the project, link the contract (PO) and the regulated system where relevant.
+                purchase_order = None
+                if doc_type in (DT.CHANGE_ORDER, DT.SUBMITTAL) and plan.construction_po:
+                    purchase_order = plan.construction_po
+                elif subject in ("Notice of Award", "Notice to Proceed", "Request for Time Extension"):
+                    purchase_order = plan.construction_po or plan.design_po
+                compliance_unit = unit if unit and (recipient in AGENCIES or self.rng.random() < 0.1) else None
+
                 doc_date = self.date_between(plan.start, end)
-                docs.append(Document(
-                    project=plan.project, subject=subject, originating_organization=origin,
-                    recipient_organization=recipient, document_type=doc_type, document_date=doc_date,
-                ))
-                added = doc_date + datetime.timedelta(days=self.rng.randint(0, 5))
-                edited = added + datetime.timedelta(days=self.rng.choice([0, 0, 0, 1, 4, 12]))
-                stamps.append((min(added, self.today), min(edited, self.today)))
+                add(Document(
+                    project=plan.project, compliance_unit=compliance_unit, purchase_order=purchase_order,
+                    subject=subject, originating_organization=origin, recipient_organization=recipient,
+                    document_type=doc_type, document_date=doc_date,
+                ), doc_date + datetime.timedelta(days=self.rng.randint(0, 5)))
+
+        # Recurring compliance records filed against each compliance unit (no project).
+        first_year = 2019
+        for unit in self.units.values():
+            agency = UNIT_AGENCY[unit.unit_type]
+            for subject, doc_type, schedule, outgoing in COMPLIANCE_RECORDS[unit.unit_type]:
+                if schedule == "annual":
+                    dates = [(datetime.date(y + 1, self.rng.randint(1, 3), self.rng.randint(1, 28)), {"year": y})
+                             for y in range(first_year, self.today.year)]
+                elif schedule == "triennial":
+                    start = first_year + self.rng.randint(0, 2)
+                    dates = [(self.date_between(datetime.date(y, 1, 1), datetime.date(y, 12, 28)), {})
+                             for y in range(start, self.today.year + 1, 3)]
+                elif schedule == "monthly":
+                    dates = []
+                    for back in range(6, 0, -1):
+                        month = add_months(self.today.replace(day=1), -back)
+                        dates.append((add_months(month, 1) + datetime.timedelta(days=self.rng.randint(10, 25)),
+                                      {"month": f"{month:%B %Y}"}))
+                else:
+                    dates = [(self.date_between(datetime.date(first_year, 1, 1), self.today), {})]
+                for doc_date, values in dates:
+                    if doc_date > self.today:
+                        continue
+                    origin, recipient = (UTILITY, agency) if outgoing else (agency, UTILITY)
+                    add(Document(
+                        compliance_unit=unit, subject=subject.format(**values), originating_organization=origin,
+                        recipient_organization=recipient, document_type=doc_type, document_date=doc_date,
+                    ), doc_date + datetime.timedelta(days=self.rng.randint(0, 3)))
+
+        # Invoice correspondence: return letters for rejected invoices, pay-application backup for some others.
+        construction_pos = {plan.construction_po.pk for plan in plans if plan.construction_po}
+        pay_app_numbers = {}
+        for inv in invoices:
+            po = inv.purchase_order
+            if inv.status == Invoice.Status.REJECTED:
+                reason = self.pick(INVOICE_RETURN_REASONS)
+                doc_date = min(inv.received_date + datetime.timedelta(days=self.rng.randint(3, 10)), self.today)
+                add(Document(
+                    invoice=inv, purchase_order=po, project=po.project,
+                    subject=f"Invoice {inv.invoice_number} returned — {reason}", originating_organization=UTILITY,
+                    recipient_organization=inv.vendor.name, document_type=DT.LETTER, document_date=doc_date,
+                ), doc_date)
+            elif po.pk in construction_pos:
+                number = pay_app_numbers[po.pk] = pay_app_numbers.get(po.pk, 0) + 1
+                if self.rng.random() < 0.06:
+                    add(Document(
+                        invoice=inv, project=po.project,
+                        subject=f"Pay Application No. {number} — Progress Payment Backup",
+                        originating_organization=inv.vendor.name, recipient_organization=UTILITY,
+                        document_type=DT.OTHER, document_date=inv.invoice_date,
+                    ), inv.received_date)
+
+        # Contract documents for blanket (non-project) purchase orders.
+        for po in pos:
+            if po.project_id is None:
+                award = po.start_date - datetime.timedelta(days=self.rng.randint(10, 30))
+                add(Document(
+                    purchase_order=po, subject=f"Notice of Award — {po.description}", originating_organization=UTILITY,
+                    recipient_organization=po.vendor.name, document_type=DT.LETTER, document_date=award,
+                ), award)
+                add(Document(
+                    purchase_order=po, subject="Certificate of Insurance", originating_organization=po.vendor.name,
+                    recipient_organization=UTILITY, document_type=DT.OTHER,
+                    document_date=award + datetime.timedelta(days=self.rng.randint(3, 9)),
+                ), award + datetime.timedelta(days=10))
+
         for d in docs:
             d.full_clean()
         Document.objects.bulk_create(docs, batch_size=500)
@@ -666,10 +856,12 @@ class Generator:
         pos = self.make_purchase_orders(plans)
         invoices = self.make_invoices(pos)
         reports = self.make_field_reports(plans)
-        documents = self.make_documents(plans)
+        units = self.make_compliance_units()
+        documents = self.make_documents(plans, pos, invoices)
         counts = {
             "vendors": len(vendors), "projects": len(plans), "purchase orders": len(pos),
-            "invoices": len(invoices), "field reports": len(reports), "documents": len(documents),
+            "invoices": len(invoices), "field reports": len(reports), "compliance units": len(units),
+            "documents": len(documents),
         }
         for extension in EXTENSIONS:
             counts.update(extension(self, plans))

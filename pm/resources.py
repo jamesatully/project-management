@@ -16,13 +16,13 @@ Column ``kind`` values (rendered by ``pm.templatetags.pm_tags.cell``):
 ``link`` (links to the detail page), ``text``, ``money``, ``date``,
 ``status`` (coloured badge), ``fk`` (links to the related object's page),
 ``hours``, ``score`` (1-25 risk score badge), ``month`` (e.g. "Sep 2026"),
-``days`` (signed day variance). A column may name a model property instead of
+``days`` (signed day variance), ``links`` (a list of records, each linked). A column may name a model property instead of
 a field; such columns are not sortable.
 """
 from dataclasses import dataclass, field
 
 from . import filters, forms
-from .models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 @dataclass(frozen=True)
@@ -100,6 +100,20 @@ REGISTRY = {
             ],
         ),
         Resource(
+            key="complianceunit",
+            url_prefix="compliance-units",
+            model=ComplianceUnit,
+            form_class=forms.ComplianceUnitForm,
+            filterset_class=filters.ComplianceUnitFilter,
+            icon="badge",
+            columns=[
+                Column("name", "Unit Name", "link"),
+                Column("unit_type", "Unit Type"),
+            ],
+            search_fields=["name"],
+            related=[Related("documents", "document", "compliance_unit")],
+        ),
+        Resource(
             key="purchaseorder",
             url_prefix="purchase-orders",
             model=PurchaseOrder,
@@ -117,7 +131,7 @@ REGISTRY = {
             ],
             search_fields=["po_number", "contract_number", "vendor__name", "project__name", "project__project_id"],
             select_related=["vendor", "project"],
-            related=[Related("invoices", "invoice", "purchase_order")],
+            related=[Related("invoices", "invoice", "purchase_order"), Related("documents", "document", "purchase_order")],
         ),
         Resource(
             key="invoice",
@@ -137,6 +151,7 @@ REGISTRY = {
             ],
             search_fields=["invoice_number", "vendor__name", "purchase_order__po_number"],
             select_related=["vendor", "purchase_order"],
+            related=[Related("documents", "document", "invoice")],
         ),
         Resource(
             key="fieldreport",
@@ -164,14 +179,17 @@ REGISTRY = {
             icon="document",
             columns=[
                 Column("subject", "Subject", "link"),
-                Column("project", "Project", "fk"),
+                Column("linked_records", "Linked To", "links"),
                 Column("document_type", "Type"),
                 Column("originating_organization", "From"),
                 Column("recipient_organization", "To"),
                 Column("document_date", "Date", "date"),
             ],
-            search_fields=["subject", "originating_organization", "recipient_organization", "project__name"],
-            select_related=["project"],
+            search_fields=[
+                "subject", "originating_organization", "recipient_organization", "project__name",
+                "compliance_unit__name", "purchase_order__po_number", "invoice__invoice_number",
+            ],
+            select_related=["project", "compliance_unit", "purchase_order", "invoice"],
         ),
         Resource(
             key="vendor",

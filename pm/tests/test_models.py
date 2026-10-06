@@ -1,12 +1,15 @@
 import datetime
+import importlib
 import uuid
 
+from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import ProtectedError
 from django.test import TestCase
 
-from ..models import Invoice
-from .factories import make_invoice, make_po, make_project, make_vendor
+from ..models import Document, Invoice, Project
+from .factories import make_compliance_unit, make_document, make_invoice, make_po, make_project, make_vendor
 
 
 class ProjectModelTests(TestCase):
@@ -25,6 +28,52 @@ class ProjectModelTests(TestCase):
         make_project(project_id="2022-1-1-0")  # same budget ID is fine
         with self.assertRaises(IntegrityError):
             make_project(budget_id="1")
+
+
+class ProjectTypeTests(TestCase):
+    def test_project_types(self):
+        self.assertEqual(
+            Project.ProjectType.choices,
+            [("CIP_EXPANSION", "CIP Expansion"), ("CIP_RR", "CIP R&R"), ("DEVELOPMENT", "Development")],
+        )
+
+
+class ProjectTypeMigrationTests(TestCase):
+    def test_old_types_map_to_cip_rr(self):
+        migration = importlib.import_module("pm.migrations.0002_compliance_units_and_document_links")
+        old_cip, old_env = make_project(), make_project(project_id="2022-1-1-0")
+        Project.objects.filter(pk=old_cip.pk).update(project_type="CIP")
+        Project.objects.filter(pk=old_env.pk).update(project_type="ENVIRONMENTAL")
+        migration.remap_project_types(migration.FORWARD)(apps, None)
+        self.assertEqual(set(Project.objects.values_list("project_type", flat=True)), {"CIP_RR"})
+
+
+class DocumentLinkTests(TestCase):
+    def doc(self, **links):
+        return Document(subject="Letter", originating_organization="A", recipient_organization="B",
+                        document_type="LETTER", document_date=datetime.date(2026, 1, 1), **links)
+
+    def test_document_requires_at_least_one_link(self):
+        with self.assertRaises(ValidationError):
+            self.doc().full_clean()
+        with self.assertRaises(IntegrityError):  # enforced by the database too
+            self.doc().save()
+
+    def test_document_can_link_to_any_record(self):
+        project, unit = make_project(), make_compliance_unit()
+        po = make_po(project=project)
+        invoice = make_invoice(po)
+        for links in [{"project": project}, {"compliance_unit": unit}, {"purchase_order": po}, {"invoice": invoice}]:
+            with self.subTest(links=list(links)):
+                self.doc(**links).full_clean()
+        doc = self.doc(project=project, invoice=invoice)
+        self.assertEqual(doc.linked_records, [project, invoice])
+
+    def test_linked_records_protect_documents(self):
+        unit = make_compliance_unit()
+        make_document(compliance_unit=unit)
+        with self.assertRaises(ProtectedError):
+            unit.delete()
 
 
 class PurchaseOrderModelTests(TestCase):

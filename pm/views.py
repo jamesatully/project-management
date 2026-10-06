@@ -149,7 +149,7 @@ class DashboardView(LoginRequiredMixin, generic.TemplateView):
             )
 
         ctx["recent_reports"] = FieldReport.objects.select_related("project")[:5]
-        ctx["recent_documents"] = Document.objects.select_related("project")[:5]
+        ctx["recent_documents"] = Document.objects.all()[:5]
         ctx["pending_invoices"] = pending.select_related("vendor", "purchase_order").order_by("invoice_date")[:6]
         ctx["panels"] = [panel for panel in (fn(self.request) for fn in DASHBOARD_PANELS) if panel]
         return ctx

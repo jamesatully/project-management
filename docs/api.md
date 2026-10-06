@@ -25,7 +25,8 @@ Each resource supports `GET` (list), `POST` (create), and on `/<id>/`:
 | Purchase orders | `/api/purchase-orders/` | `status`, `vendor`, `project`, `start_date_after`, `end_date_before` | PO #, contract #, vendor, project |
 | Invoices | `/api/invoices/` | `status`, `vendor`, `purchase_order`, `project`, `invoice_date_after`, `invoice_date_before` | invoice #, vendor, PO # |
 | Field reports | `/api/field-reports/` | `project`, `report_date_after`, `report_date_before` | entered by, notes, project |
-| Documents | `/api/documents/` | `project`, `document_type`, `document_date_after`, `document_date_before` | subject, organizations, project |
+| Compliance units | `/api/compliance-units/` | `unit_type` | name |
+| Documents | `/api/documents/` | `project`, `compliance_unit`, `purchase_order`, `invoice`, `document_type`, `document_date_after`, `document_date_before` | subject, organizations, project, unit, PO #, invoice # |
 
 Planning (see [planning.md](planning.md)):
 
@@ -78,6 +79,17 @@ curl -H "$H" -H "Content-Type: application/json" -X PATCH localhost:8000/api/inv
   -d '{"status": "PAID", "paid_date": "2026-10-01"}'
 ```
 
+Documents need at least one of `project`, `compliance_unit`, `purchase_order`
+or `invoice`:
+
+```bash
+curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/documents/ \
+  -d '{"compliance_unit": "<uuid>", "subject": "Discharge Monitoring Report — September 2026",
+       "document_type": "REPORT", "document_date": "2026-10-20",
+       "originating_organization": "Riverbend Water & Sewer Utility",
+       "recipient_organization": "State Department of Environmental Quality"}'
+```
+
 ## Validation errors
 
 Invalid writes return `400` with field-keyed messages, e.g.
@@ -85,4 +97,5 @@ Invalid writes return `400` with field-keyed messages, e.g.
 ```json
 {"project_id": ["Project ID must look like 2021-2-20-0 (year-#-#-#)."]}
 {"purchase_order": ["Purchase order belongs to a different vendor."]}
+{"non_field_errors": ["Link the document to at least one project, compliance unit, purchase order or invoice."]}
 ```

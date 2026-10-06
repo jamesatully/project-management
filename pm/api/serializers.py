@@ -7,11 +7,14 @@ rules as the web forms.
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from ..models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 class ModelCleanMixin:
-    """Run the model's ``clean()`` so API writes get the same validation as forms."""
+    """
+    Run the model's ``clean()`` and ``Meta.constraints`` checks so API writes get the
+    same validation as forms (DRF doesn't check CheckConstraints on its own).
+    """
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -20,6 +23,7 @@ class ModelCleanMixin:
             setattr(instance, key, value)
         try:
             instance.clean()
+            instance.validate_constraints()
         except DjangoValidationError as exc:
             raise serializers.ValidationError(serializers.as_serializer_error(exc))
         return attrs
@@ -33,6 +37,14 @@ class VendorSerializer(serializers.ModelSerializer):
             "primary_contact_name", "primary_contact_phone",
             "created_at", "updated_at",
         ]
+
+
+class ComplianceUnitSerializer(serializers.ModelSerializer):
+    unit_type_display = serializers.CharField(source="get_unit_type_display", read_only=True)
+
+    class Meta:
+        model = ComplianceUnit
+        fields = ["id", "name", "unit_type", "unit_type_display", "created_at", "updated_at"]
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -91,16 +103,20 @@ class FieldReportSerializer(serializers.ModelSerializer):
         ]
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class DocumentSerializer(ModelCleanMixin, serializers.ModelSerializer):
     project_display = serializers.CharField(source="project", read_only=True)
+    compliance_unit_name = serializers.CharField(source="compliance_unit.name", read_only=True, default=None)
+    po_number = serializers.CharField(source="purchase_order.po_number", read_only=True, default=None)
+    invoice_number = serializers.CharField(source="invoice.invoice_number", read_only=True, default=None)
     document_type_display = serializers.CharField(source="get_document_type_display", read_only=True)
 
     class Meta:
         model = Document
         fields = [
-            "id", "project", "project_display", "subject",
-            "originating_organization", "recipient_organization",
+            "id", "subject", "originating_organization", "recipient_organization",
             "document_type", "document_type_display", "document_date",
+            "project", "project_display", "compliance_unit", "compliance_unit_name",
+            "purchase_order", "po_number", "invoice", "invoice_number",
             "added_date", "last_edited_date",
         ]
         read_only_fields = ["added_date", "last_edited_date"]

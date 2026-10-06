@@ -5,7 +5,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.template.defaultfilters import date as date_filter
 from django.template.defaultfilters import linebreaksbr
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 EMPTY = format_html('<span class="text-bodydark2">—</span>')
 
@@ -105,6 +105,13 @@ def render_value(obj, name, kind="text"):
     except FieldDoesNotExist:
         field = None
     value = getattr(obj, name)
+    if kind == "links":
+        if not value:
+            return EMPTY
+        return format_html_join(
+            "", '<a href="{}" class="block hover:text-primary hover:underline">{}</a>',
+            ((o.get_absolute_url(), o) for o in value),
+        )
     if value in (None, ""):
         return EMPTY
 

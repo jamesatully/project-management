@@ -6,7 +6,7 @@ field filters defined in :mod:`pm.filters`.
 from rest_framework import viewsets
 
 from .. import filters
-from ..models import Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 from . import serializers
 
 
@@ -16,6 +16,14 @@ class VendorViewSet(viewsets.ModelViewSet):
     filterset_class = filters.VendorFilter
     search_fields = ["name", "primary_contact_name", "mailing_address"]
     ordering_fields = ["name", "created_at"]
+
+
+class ComplianceUnitViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceUnit.objects.all()
+    serializer_class = serializers.ComplianceUnitSerializer
+    filterset_class = filters.ComplianceUnitFilter
+    search_fields = ["name"]
+    ordering_fields = ["name", "unit_type"]
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -51,8 +59,11 @@ class FieldReportViewSet(viewsets.ModelViewSet):
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
-    queryset = Document.objects.select_related("project")
+    queryset = Document.objects.select_related("project", "compliance_unit", "purchase_order", "invoice")
     serializer_class = serializers.DocumentSerializer
     filterset_class = filters.DocumentFilter
-    search_fields = ["subject", "originating_organization", "recipient_organization", "project__name"]
+    search_fields = [
+        "subject", "originating_organization", "recipient_organization", "project__name", "compliance_unit__name",
+        "purchase_order__po_number", "invoice__invoice_number",
+    ]
     ordering_fields = ["document_date", "added_date", "last_edited_date", "document_type"]
