@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Local
     "pm",
     "planning",
+    "budgets",
 ]
 
 MIDDLEWARE = [

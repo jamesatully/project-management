@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load pm_tags budget_tags %}
+{% block title %}Budget · {{ project }}{% endblock %}
+{% block page_title %}Project{% endblock %}
+
+{% block content %}
+{% include "partials/detail_header.html" with back_label="All projects" title=project %}
+
+{% if not selected %}
+<section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="py-6 text-center">
+    <h3 class="text-lg font-semibold text-ink dark:text-white">No budget yet</h3>
+    <p class="mx-auto mt-1 max-w-md">Start the project's budget for the FY{{ next_year }} cycle, then add Design, Construction, Land and capitalized operating costs by fiscal year.</p>
+    <a href="{{ create_url }}" class="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-primary/90">
+      {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Start budget
+    </a>
+  </div>
+</section>
+{% else %}
+
+{# ---------- Selected version ---------- #}
+<section class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="flex flex-wrap items-start justify-between gap-3 px-6 pt-6">
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-3">
+        <h3 class="text-lg font-semibold text-ink dark:text-white">{{ selected.name }}</h3>
+        {{ selected|status_badge }}
+      </div>
+      <p class="mt-1 text-xs text-bodydark2">
+        {% if selected.prepared_by %}Prepared by {{ selected.prepared_by }}{% endif %}
+        {% if selected.submitted_date %} · Submitted {{ selected.submitted_date|date:"M j, Y" }}{% endif %}
+        {% if selected.approved_date %} · Approved{% if selected.approved_by %} by {{ selected.approved_by }}{% endif %} on {{ selected.approved_date|date:"M j, Y" }}{% endif %}
+        {% if selected.superseded_by %} · Superseded by the <a href="{{ selected.superseded_by.get_absolute_url }}" class="text-primary hover:underline">FY{{ selected.superseded_by.budget_year }} budget</a>{% endif %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% if selected.is_editable %}
+      <a href="{{ lines_url }}" class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-medium text-white hover:bg-primary/90">
+        {% include "partials/icon.html" with name="pencil" size="h-4 w-4" %} Edit line items
+      </a>
+      {% endif %}
+      {% if can_copy %}
+      <form method="post" action="{{ copy_url }}">
+        {% csrf_token %}
+        <button class="inline-flex items-center gap-1.5 rounded-lg {% if selected.is_editable %}border border-stroke text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2{% else %}bg-primary text-white hover:bg-primary/90{% endif %} px-4 py-2 font-medium"
+                title="Start an FY{{ next_year }} draft from this budget's line items">
+          {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} New FY{{ next_year }} version
+        </button>
+      </form>
+      {% endif %}
+      <a href="{{ edit_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-stroke px-4 py-2 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Edit details</a>
+      <a href="{{ delete_url }}" class="inline-flex items-center rounded-lg border border-stroke px-3 py-2 text-danger hover:bg-rose-50 dark:border-strokedark dark:hover:bg-rose-500/10" title="Delete this version" aria-label="Delete this version">
+        {% include "partials/icon.html" with name="trash" size="h-4 w-4" %}
+      </a>
+    </div>
+  </div>
+
+  {% if grid.rows %}
+  <dl class="mt-5 flex flex-wrap gap-px border-y border-stroke bg-stroke dark:border-strokedark dark:bg-strokedark">
+    {% for cat in grid.categories %}
+    <div class="min-w-[10rem] flex-1 bg-white px-6 py-3 dark:bg-boxdark">
+      <dt class="text-xs text-bodydark2">{{ cat.label }}</dt>
+      <dd class="mt-0.5 font-semibold tabular-nums text-ink dark:text-white">{{ cat.total|money }}</dd>
+    </div>
+    {% endfor %}
+    <div class="min-w-[10rem] flex-1 bg-white px-6 py-3 dark:bg-boxdark">
+      <dt class="text-xs text-bodydark2">Total</dt>
+      <dd class="mt-0.5 font-semibold tabular-nums text-primary dark:text-primary-dark">{{ grid.total|money }}</dd>
+    </div>
+  </dl>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>
+          <th class="px-6 py-3 font-medium">Line item</th>
+          {% for fy in grid.years %}<th class="whitespace-nowrap px-4 py-3 text-right font-medium">FY{{ fy }}</th>{% endfor %}
+          <th class="whitespace-nowrap px-6 py-3 text-right font-medium">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for row in grid.rows %}
+        <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+          <td class="min-w-[14rem] px-6 py-3">
+            <span class="font-medium text-ink dark:text-white">{{ row.item.get_category_display }}</span>
+            {% if row.item.description %}<span class="block text-xs text-bodydark2">{{ row.item.description }}</span>{% endif %}
+          </td>
+          {% for cell in row.cells %}<td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">{{ cell|amount }}</td>{% endfor %}
+          <td class="whitespace-nowrap px-6 py-3 text-right font-medium tabular-nums text-ink dark:text-white">{{ row.total|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-stroke font-semibold text-ink dark:border-strokedark dark:text-white">
+        <tr>
+          <td class="px-6 py-3">Total</td>
+          {% for t in grid.column_totals %}<td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">{{ t|money }}</td>{% endfor %}
+          <td class="whitespace-nowrap px-6 py-3 text-right tabular-nums">{{ grid.total|money }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-8 text-center">
+    <p>No line items yet.</p>
+    {% if selected.is_editable %}<a href="{{ lines_url }}" class="mt-2 inline-flex items-center gap-1 font-medium text-primary hover:underline">{% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Add line items</a>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if selected.notes %}
+  <div class="border-t border-stroke px-6 py-4 dark:border-strokedark">
+    <h4 class="text-xs font-semibold uppercase tracking-wide text-bodydark2">Notes</h4>
+    <p class="mt-1 max-w-4xl text-ink dark:text-white">{{ selected.notes|linebreaksbr }}</p>
+  </div>
+  {% endif %}
+  {% if not selected.is_editable %}
+  <p class="border-t border-stroke px-6 py-3 text-xs text-bodydark2 dark:border-strokedark">
+    {{ selected.get_status_display }} budgets are locked.{% if can_copy %} To change the figures, start a new FY{{ next_year }} version.{% endif %}
+  </p>
+  {% endif %}
+</section>
+
+{# ---------- Versions ---------- #}
+<section class="mt-6 rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="flex items-center justify-between gap-4 px-6 pt-6">
+    <h3 class="font-semibold text-ink dark:text-white">Versions <span class="ml-1 font-normal text-bodydark2">({{ versions|length }})</span></h3>
+  </div>
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-left">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>
+          <th class="px-6 py-3 font-medium">Budget</th>
+          <th class="px-6 py-3 font-medium">Status</th>
+          <th class="px-6 py-3 text-right font-medium">Total</th>
+          <th class="whitespace-nowrap px-6 py-3 text-right font-medium">Change</th>
+          <th class="whitespace-nowrap px-6 py-3 font-medium">Prepared by</th>
+          <th class="px-6 py-3 font-medium">Submitted</th>
+          <th class="px-6 py-3 font-medium">Approved</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for v in versions %}
+        <tr class="{% if v.budget == selected %}bg-primary/5 dark:bg-primary/10{% else %}hover:bg-whiten/60 dark:hover:bg-boxdark-2/60{% endif %}">
+          <td class="whitespace-nowrap px-6 py-3">
+            <a href="{{ v.budget.get_absolute_url }}" class="font-medium text-primary hover:underline" {% if v.budget == selected %}aria-current="true"{% endif %}>{{ v.budget.name }}</a>
+          </td>
+          <td class="whitespace-nowrap px-6 py-3">{{ v.budget|status_badge }}</td>
+          <td class="whitespace-nowrap px-6 py-3 text-right tabular-nums">{{ v.budget.total|money }}</td>
+          <td class="whitespace-nowrap px-6 py-3 text-right tabular-nums {% if v.change > 0 %}text-danger{% elif v.change < 0 %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ v.change|signed_money }}</td>
+          <td class="whitespace-nowrap px-6 py-3">{{ v.budget.prepared_by|default:"—" }}</td>
+          <td class="whitespace-nowrap px-6 py-3">{{ v.budget.submitted_date|date:"M j, Y"|default:"—" }}</td>
+          <td class="whitespace-nowrap px-6 py-3">{{ v.budget.approved_date|date:"M j, Y"|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="px-6 py-3 text-xs text-bodydark2">Change is measured against the previous version that wasn't rejected. Approving a version supersedes the one approved before it.</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -16,7 +16,7 @@ reload automatically.
 
 ```bash
 docker compose up -d --build                            # start (http://localhost:8000)
-docker compose exec web python manage.py test pm planning  # tests — run after every change
+docker compose exec web python manage.py test pm planning budgets  # tests — run after every change
 docker compose exec web python manage.py makemigrations pm
 docker compose exec web python manage.py migrate
 docker compose logs -f web
@@ -44,7 +44,10 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
   app that plugs into pm through hooks in `pm/resources.py` and `pm/demo.py`,
   registered in `planning/resources.py` / `planning/demo.py`. **pm must never
   import planning.** See docs/planning.md.
-- `docs/` — data-model.md, api.md, architecture.md, planning.md.
+- `budgets/` — versioned annual project budgets (line items by fiscal year,
+  Oct 1 – Sep 30) and the program budget roll-up (`budgets/rollup.py`). Same
+  plug-in pattern as planning; pm must never import it. See docs/budgets.md.
+- `docs/` — data-model.md, api.md, architecture.md, planning.md, budgets.md.
 
 ## Conventions
 
@@ -54,7 +57,7 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
   FilterSet, `resources.py` entry, admin, **docs/data-model.md**, and tests.
 - When adding an API filter or endpoint, update **docs/api.md**.
 - New feature areas go in their own app and extend pm through its hooks
-  (`register`, `register_tab`, `register_dashboard_panel`, `demo.EXTENSIONS`)
+  (`register`, `register_tab`, `register_nav_link`, `register_dashboard_panel`, `demo.EXTENSIONS`)
   rather than editing pm templates/views directly.
 - Money is `DecimalField(max_digits=14, decimal_places=2)`; render with
   `display.money` / the `money` template filter.

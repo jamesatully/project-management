@@ -9,14 +9,14 @@ configuration, so adding a model to the UI is mostly a matter of adding an
 entry here.
 
 Other apps extend the UI without ``pm`` importing them: call :func:`register`,
-:func:`register_related`, :func:`register_tab` and :func:`register_dashboard_panel` from their
+:func:`register_related`, :func:`register_tab`, :func:`register_nav_link` and :func:`register_dashboard_panel` from their
 ``AppConfig.ready()`` (see ``planning/apps.py``).
 
 Column ``kind`` values (rendered by ``pm.templatetags.pm_tags.cell``):
 ``link`` (links to the detail page), ``text``, ``money``, ``date``,
 ``status`` (coloured badge), ``fk`` (links to the related object's page),
 ``hours``, ``score`` (1-25 risk score badge), ``month`` (e.g. "Sep 2026"),
-``days`` (signed day variance), ``links`` (a list of records, each linked), ``email`` (mailto link). A column may name a model property instead of
+``days`` (signed day variance), ``fy`` (fiscal year, e.g. "FY2027"), ``links`` (a list of records, each linked), ``email`` (mailto link). A column may name a model property instead of
 a field; such columns are not sortable.
 """
 from dataclasses import dataclass, field
@@ -48,6 +48,17 @@ class Tab:
 
     label: str
     url_name: str  # reversed with the object's pk
+
+
+@dataclass(frozen=True)
+class NavLink:
+    """A sidebar link to a page that isn't a resource list, e.g. a report."""
+
+    group: str  # sidebar heading, shared with resources' nav_group
+    label: str
+    url_name: str
+    icon: str
+    key: str  # matched against the page's ``active_nav`` to highlight the link
 
 
 @dataclass(frozen=True)
@@ -235,6 +246,9 @@ REGISTRY = {
 # resource key -> extra detail-page tabs (the "Overview" tab is implicit).
 DETAIL_TABS = {}
 
+# Extra sidebar links, listed after the resources in their group.
+NAV_LINKS = []
+
 # Callables ``fn(request) -> dict | None``; a dict must include "template" and
 # is passed to that template as ``panel``. Rendered at the end of the dashboard.
 DASHBOARD_PANELS = []
@@ -252,6 +266,10 @@ def register_related(resource_key, related):
 
 def register_tab(resource_key, tab):
     DETAIL_TABS.setdefault(resource_key, []).append(tab)
+
+
+def register_nav_link(link):
+    NAV_LINKS.append(link)
 
 
 def register_dashboard_panel(fn):

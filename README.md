@@ -28,6 +28,12 @@ documents. Every record is also available through a documented REST API.
   milestones and communication plan — plus monthly updates and other activity
   notes. Portfolio-wide risk and milestone lists; dashboard panels for overdue
   monthly updates and top risks. See [docs/planning.md](docs/planning.md).
+- **Budgets** (`budgets` app): annual, versioned project budgets (Draft →
+  Submitted → Approved, superseding the previous approved version) with
+  Design, Construction, Land / Easement Acquisition and capitalized operating
+  line items costed by fiscal year (Oct 1 – Sep 30), rolled up into the CIP
+  Expansion, CIP R&R and Development program budgets. See
+  [docs/budgets.md](docs/budgets.md).
 - UUID primary keys, PostgreSQL, Docker, light/dark mode, responsive layout.
 
 ## Quick start
@@ -70,6 +76,8 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 | `/projects/`, `/compliance-units/`, `/vendors/`, `/contacts/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
 | `/projects/<id>/plan/`, `/projects/<id>/activity/` | A project's plan and activity notes |
 | `/plans/`, `/risks/`, `/milestones/`, `/activity/` | Planning lists across all projects |
+| `/projects/<id>/budget/` | A project's budget versions |
+| `/budgets/`, `/budgets/program/` | All budget versions; the program budget roll-up |
 | `/api/` | Browsable REST API |
 | `/api/docs/` | Swagger UI |
 | `/api/redoc/` | ReDoc |
@@ -86,6 +94,8 @@ Project ──< (optional) PurchaseOrder
 Document ──> Project, Compliance Unit, Purchase Order, Invoice   (any combination, at least one)
 
 Contact ──> (optional) User          planning Stakeholder ──> Project, Contact
+
+budgets: Project ──< Budget ──< BudgetLineItem ──< BudgetAmount (one per fiscal year)
 ```
 
 | Model | Key fields |
@@ -102,7 +112,8 @@ Contact ──> (optional) User          planning Stakeholder ──> Project, C
 All models use UUID primary keys and carry `created_at` / `updated_at`.
 Full field reference: [docs/data-model.md](docs/data-model.md). Planning models
 (plans, objectives, risks, stakeholders, milestones, communication items,
-activity notes) are described in [docs/planning.md](docs/planning.md).
+activity notes) are described in [docs/planning.md](docs/planning.md); budget
+models in [docs/budgets.md](docs/budgets.md).
 
 ## API
 
@@ -118,7 +129,7 @@ See [docs/api.md](docs/api.md) for endpoints, filters and examples.
 ## Development
 
 ```bash
-docker compose exec web python manage.py test pm planning  # run tests
+docker compose exec web python manage.py test pm planning budgets  # run tests
 docker compose exec web python manage.py makemigrations # after model changes
 docker compose logs -f web                              # server logs
 ```
