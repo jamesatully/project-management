@@ -13,8 +13,8 @@ import re
 from django.utils import timezone
 
 from pm import demo as pm_demo
-from pm.demo import FIRST, LAST, UTILITY, add_months
-from pm.models import Project
+from pm.demo import FIRST, LAST, UTILITY, UTILITY_DOMAIN, add_months
+from pm.models import Contact, Project
 
 from .models import ActivityNote, CommunicationItem, Milestone, Objective, ProjectPlan, Risk, Stakeholder
 
@@ -316,6 +316,49 @@ STAKEHOLDERS = {
     ],
 }
 
+# Stakeholder role -> (contact's job title, role in their organization). Rows sharing an
+# organization and title are the same person on every project.
+CONTACT_PROFILES = {
+    "Engineering Division Manager — project sponsor": (
+        "Engineering Division Manager", "Leads the Engineering Division; sponsors capital projects and approves project plans."),
+    "Approves budget and contract award": (
+        "", "Elected board that adopts the utility budget, sets rates and awards major contracts."),
+    "Budget analyst": ("Budget Analyst", "Tracks capital budgets, encumbrances and fund balances; prepares budget amendments."),
+    "Distribution superintendent": (
+        "Distribution Superintendent", "Runs water distribution crews; schedules valve operations and shutdowns."),
+    "Customer service manager": (
+        "Customer Service Manager", "Manages the call center and customer notifications for planned outages."),
+    "Residents along the work zone": ("", "Volunteer association representing neighborhood residents."),
+    "Nearby residents": ("", "Volunteer association representing neighborhood residents."),
+    "Fire marshal (hydrant outages)": ("Fire Marshal", "Oversees fire protection; must be notified of hydrant outages."),
+    "Right-of-way and paving permits": (
+        "Right-of-Way Permit Coordinator", "Issues right-of-way, traffic control and street restoration permits."),
+    "Right-of-way permits": (
+        "Right-of-Way Permit Coordinator", "Issues right-of-way, traffic control and street restoration permits."),
+    "Collections superintendent": (
+        "Collection System Superintendent", "Runs sewer maintenance crews, CCTV inspection and bypass operations."),
+    "Wastewater permit coordinator": (
+        "Wastewater Permit Coordinator", "Reviews wastewater facility plans and administers discharge permits."),
+    "Permit writer": ("NPDES Permit Writer", "Writes and modifies treatment plant discharge permits."),
+    "Plant superintendent": ("Plant Superintendent", "Responsible for treatment plant operations and permit compliance."),
+    "Maintenance supervisor": ("Maintenance Supervisor", "Leads mechanical and electrical maintenance at the plants."),
+    "Controls engineer": ("SCADA Controls Engineer", "Maintains SCADA, PLC programming and plant control standards."),
+    "Water operations supervisor": (
+        "Water Operations Supervisor", "Operates reservoirs, pump stations and the water system's hydraulics."),
+    "Drinking water regulator": (
+        "Drinking Water Engineer", "Reviews drinking water project plans and approves facilities for service."),
+    "Operations manager": ("Operations Manager", "Oversees water and wastewater operations divisions."),
+    "Asset management lead": ("Asset Management Lead", "Maintains the asset inventory, condition scores and renewal plan."),
+    "Reviews rate and capital impacts": ("", "Citizen committee advising the board on rates and the capital plan."),
+    "Water quality specialist": ("Water Quality Specialist", "Reviews water quality and in-water work permits."),
+    "Habitat biologist": ("Habitat Biologist", "Reviews fish passage, in-water work windows and habitat mitigation."),
+    "Local restoration partner": ("", "Nonprofit watershed council that partners on restoration projects."),
+    "Applicant; designs and builds the facilities": ("", "Private developer of the subdivision."),
+    "Plan reviewer": ("Development Plan Reviewer", "Reviews developer-designed water and sewer extensions."),
+    "Land-use approvals": ("Associate Planner", "Processes land-use applications and conditions of approval."),
+    "Contractor superintendent": ("Superintendent", "Runs the contractor's crews on site; daily contact for the inspector."),
+}
+
 # --- Communication plan: (purpose, audience, method, frequency, owner key) ----------
 
 COMMS_COMMON = [
@@ -419,6 +462,7 @@ class PlanningGenerator:
         self.today = generator.today
         self.rng = random.Random(generator.seed * 7919 + 17)
         self._schedules = {}
+        self.new_contacts = []
 
     def pick(self, seq):
         return self.rng.choice(seq)
@@ -511,22 +555,46 @@ class PlanningGenerator:
             ))
         return risks
 
+    def contact(self, key, name, organization, role, phone=""):
+        """The directory contact for ``key``, creating it (from ``name`` etc.) the first time."""
+        contact = self.gen.contacts.get(key)
+        if contact is None:
+            title, description = CONTACT_PROFILES[role]
+            internal = organization.startswith(UTILITY)
+            contact = Contact(
+                name=name, title=title, organization=organization, role_description=description, phone=phone,
+                contact_type=Contact.ContactType.INTERNAL if internal else Contact.ContactType.EXTERNAL,
+                email=self.gen.email(name, UTILITY_DOMAIN) if internal and title else "",
+            )
+            self.gen.contacts[key] = contact
+            self.new_contacts.append(contact)
+        return contact
+
     def stakeholders(self, plan):
+        # Random draws happen in the same order as before contacts existed, so the rest of the data is unchanged.
         rows = STAKEHOLDERS_COMMON + STAKEHOLDERS[plan.category]
         people = []
         for name, organization, role, influence, interest in rows:
-            people.append(Stakeholder(
-                project=plan.project, name=self.fmt(name, plan) if name else self.person(),
-                organization=organization, role=role, influence=influence, interest=interest,
-                contact=f"(503) 555-{self.rng.randint(150, 199):04d}" if name is None else "",
-            ))
+            if name:
+                name = self.fmt(name, plan)
+                contact = self.contact((name, organization), name, organization, role)
+            else:
+                # One person per organization and title, reused across projects.
+                name, phone = self.person(), f"(503) 555-{self.rng.randint(150, 199):04d}"
+                key = (organization, CONTACT_PROFILES[role][0])
+                contact = self.contact(key, name, organization, role, phone)
+            people.append(Stakeholder(project=plan.project, contact=contact, role=role, influence=influence,
+                                      interest=interest))
         if plan.design_vendor:
-            people.append(Stakeholder(project=plan.project, name=plan.design_vendor.primary_contact_name,
-                                      organization=plan.design_vendor.name, role="Consultant project manager",
-                                      influence="MEDIUM", interest="HIGH"))
+            vendor = plan.design_vendor
+            people.append(Stakeholder(project=plan.project, contact=self.gen.contacts[(vendor.primary_contact_name, vendor.name)],
+                                      role="Consultant project manager", influence="MEDIUM", interest="HIGH"))
         if plan.contractor:
-            people.append(Stakeholder(project=plan.project, name=self.person(), organization=plan.contractor.name,
-                                      role="Contractor superintendent", influence="MEDIUM", interest="HIGH"))
+            name, organization = self.person(), plan.contractor.name
+            contact = self.contact((organization, "Superintendent"), name, organization, "Contractor superintendent",
+                                   phone=plan.contractor.primary_contact_phone)
+            people.append(Stakeholder(project=plan.project, contact=contact, role="Contractor superintendent",
+                                      influence="MEDIUM", interest="HIGH"))
         return people
 
     def milestones(self, plan):
@@ -665,11 +733,12 @@ class PlanningGenerator:
             stakeholders = self.stakeholders(plan)
             created[Stakeholder] += stakeholders
             owners = [plan.project.project_manager, plan.project.project_manager, ENGINEERING_MANAGER] + [
-                s.name for s in stakeholders if s.organization.startswith(UTILITY) and s.name != "Board of Commissioners"]
+                s.contact.name for s in stakeholders if s.contact.organization.startswith(UTILITY) and s.contact.title]
             created[Risk] += self.risks(plan, owners)
             created[CommunicationItem] += self.communications(plan)
             created[ActivityNote] += self.notes(plan)
 
+        Contact.objects.bulk_create(self.new_contacts)
         for model, objs in created.items():
             for obj in objs:
                 if isinstance(obj, Risk):
@@ -688,7 +757,7 @@ class PlanningGenerator:
 
         labels = {ProjectPlan: "project plans", Objective: "objectives", Risk: "risks", Stakeholder: "stakeholders",
                   Milestone: "milestones", CommunicationItem: "comm. plan items", ActivityNote: "activity notes"}
-        return {labels[m]: len(objs) for m, objs in created.items()}
+        return {"contacts": len(self.gen.contacts), **{labels[m]: len(objs) for m, objs in created.items()}}
 
     def aware(self, d):
         moment = datetime.datetime.combine(d, datetime.time(8)) + datetime.timedelta(minutes=self.rng.randint(0, 540))

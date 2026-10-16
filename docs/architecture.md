@@ -45,6 +45,8 @@ importing them (the `planning` app is the first user):
 
 - `pm.resources.register(resource)` — add a model to the generic CRUD stack
   and, via `nav_group`, to the sidebar.
+- `pm.resources.register_related(resource_key, Related(...))` — add a related
+  table to another resource's detail page (contacts show their stakeholder roles).
 - `pm.resources.register_tab(resource_key, Tab(label, url_name))` — add a tab
   to a detail page (project pages get *Plan* and *Activity*).
 - `pm.resources.register_dashboard_panel(fn)` — `fn(request)` returns a dict

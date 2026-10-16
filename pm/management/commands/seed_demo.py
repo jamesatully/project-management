@@ -11,10 +11,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from pm import demo
-from pm.models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from pm.models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 # Delete order respects PROTECT foreign keys (documents reference most other records).
-MODELS = [Document, Invoice, FieldReport, PurchaseOrder, Project, ComplianceUnit, Vendor]
+# Contacts go after projects: deleting a project removes its planning stakeholders, which protect contacts.
+MODELS = [Document, Invoice, FieldReport, PurchaseOrder, Project, ComplianceUnit, Vendor, Contact]
 
 
 class Command(BaseCommand):

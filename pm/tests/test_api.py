@@ -3,7 +3,7 @@ from rest_framework.test import APITestCase
 
 from ..models import Project
 from .factories import (
-    make_compliance_unit, make_document, make_field_report, make_invoice, make_po, make_project, make_vendor,
+    make_compliance_unit, make_contact, make_document, make_field_report, make_invoice, make_po, make_project, make_vendor,
 )
 
 
@@ -24,8 +24,9 @@ class APITests(APITestCase):
         make_field_report(self.project)
         make_document(self.project)
         make_compliance_unit()
+        make_contact()
         for endpoint in ["projects", "vendors", "compliance-units", "purchase-orders", "invoices", "field-reports",
-                         "documents"]:
+                         "documents", "contacts"]:
             with self.subTest(endpoint=endpoint):
                 response = self.client.get(f"/api/{endpoint}/")
                 self.assertEqual(response.status_code, 200)
@@ -105,6 +106,24 @@ class APITests(APITestCase):
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(self.client.get(f"/api/documents/?invoice={invoice.pk}").data["count"], 1)
+
+    def test_contacts_with_and_without_user(self):
+        response = self.client.post("/api/contacts/", {
+            "name": "Dana Staff", "organization": "Utility", "contact_type": "INTERNAL", "user": self.user.pk,
+        })
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["username"], "tester")
+        self.assertEqual(response.data["contact_type_display"], "Internal")
+        response = self.client.post("/api/contacts/", {"name": "Robin Regulator", "organization": "State DEQ"})
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["contact_type"], "EXTERNAL")  # the default
+        self.assertIsNone(response.data["user"])
+        self.assertEqual(self.client.get("/api/contacts/?has_user=true").data["count"], 1)
+        self.assertEqual(self.client.get("/api/contacts/?contact_type=EXTERNAL").data["count"], 1)
+        self.assertEqual(self.client.get("/api/contacts/?search=deq").data["count"], 1)
+        # A user account can belong to only one contact.
+        response = self.client.post("/api/contacts/", {"name": "Someone", "user": self.user.pk})
+        self.assertEqual(response.status_code, 400)
 
     def test_schema_available(self):
         self.assertEqual(self.client.get("/api/schema/").status_code, 200)

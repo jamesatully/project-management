@@ -42,14 +42,16 @@ class RiskSerializer(serializers.ModelSerializer):
         read_only_fields = ["score"]
 
 
-class StakeholderSerializer(serializers.ModelSerializer):
+class StakeholderSerializer(ModelCleanMixin, serializers.ModelSerializer):
     engagement_strategy = serializers.CharField(read_only=True)
+    contact_name = serializers.CharField(source="contact.name", read_only=True)
+    organization = serializers.CharField(source="contact.organization", read_only=True)
 
     class Meta:
         model = Stakeholder
         fields = [
-            "id", "project", "name", "organization", "role", "influence", "interest",
-            "engagement_strategy", "contact", "engagement_notes", *AUDIT,
+            "id", "project", "contact", "contact_name", "organization", "role", "influence", "interest",
+            "engagement_strategy", "engagement_notes", *AUDIT,
         ]
 
 

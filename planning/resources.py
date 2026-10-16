@@ -4,7 +4,7 @@ each model, sidebar entries, the project "Plan" and "Activity" tabs,
 dashboard panels and status badge colours. Imported from PlanningConfig.ready().
 """
 from pm import display
-from pm.resources import Column, Resource, Tab, register, register_dashboard_panel, register_tab
+from pm.resources import Column, Related, Resource, Tab, register, register_dashboard_panel, register_related, register_tab
 
 from . import filters, forms, views
 from .models import ActivityNote, CommunicationItem, Milestone, Objective, ProjectPlan, Risk, Stakeholder
@@ -20,6 +20,10 @@ display.STATUS_COLORS.update(
         "NOT_ACHIEVED": "rose",
         "MITIGATING": "amber",
         "MISSED": "rose",
+        # Stakeholder influence / interest
+        "HIGH": "indigo",
+        "MEDIUM": "sky",
+        "LOW": "slate",
     }
 )
 
@@ -103,12 +107,12 @@ for resource in [
             Column("project", "Project", "fk"),
             Column("organization", "Organization"),
             Column("role", "Role"),
-            Column("influence", "Influence"),
-            Column("interest", "Interest"),
+            Column("influence", "Influence", "status"),
+            Column("interest", "Interest", "status"),
             Column("engagement_strategy", "Strategy"),
         ],
-        search_fields=["name", "organization", "role", "project__name"],
-        select_related=["project"],
+        search_fields=["contact__name", "contact__organization", "role", "project__name"],
+        select_related=["project", "contact"],
     ),
     Resource(
         key="communicationitem", url_prefix="communication-plan", nav_group=None, icon="chat",
@@ -127,6 +131,7 @@ for resource in [
 ]:
     register(resource)
 
+register_related("contact", Related("stakeholder_roles", "stakeholder", "contact", exclude=("name", "organization")))
 register_tab("project", Tab("Plan", "planning:project-plan"))
 register_tab("project", Tab("Activity", "planning:project-activity"))
 register_dashboard_panel(views.updates_due_panel)

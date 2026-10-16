@@ -5,7 +5,7 @@ behaves identically in both places.
 import django_filters
 from django import forms
 
-from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 class ProjectFilter(django_filters.FilterSet):
@@ -18,6 +18,23 @@ class VendorFilter(django_filters.FilterSet):
     class Meta:
         model = Vendor
         fields = []
+
+
+class AnyYesNoSelect(forms.NullBooleanSelect):
+    def __init__(self, attrs=None):
+        super().__init__(attrs)
+        self.choices = [("unknown", "Any"), ("true", "Yes"), ("false", "No")]
+
+
+class ContactFilter(django_filters.FilterSet):
+    has_user = django_filters.BooleanFilter(
+        field_name="user", lookup_expr="isnull", exclude=True, label="Has app account", widget=AnyYesNoSelect
+    )
+    user = django_filters.NumberFilter(widget=forms.HiddenInput)  # API: ?user=<user id>
+
+    class Meta:
+        model = Contact
+        fields = ["contact_type", "has_user", "user"]
 
 
 class ComplianceUnitFilter(django_filters.FilterSet):

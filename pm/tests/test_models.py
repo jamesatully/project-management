@@ -3,13 +3,14 @@ import importlib
 import uuid
 
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.test import TestCase
 
-from ..models import Document, Invoice, Project
-from .factories import make_compliance_unit, make_document, make_invoice, make_po, make_project, make_vendor
+from ..models import Contact, Document, Invoice, Project
+from .factories import make_compliance_unit, make_contact, make_document, make_invoice, make_po, make_project, make_vendor
 
 
 class ProjectModelTests(TestCase):
@@ -102,3 +103,28 @@ class InvoiceModelTests(TestCase):
         make_invoice(po)
         with self.assertRaises(IntegrityError):
             make_invoice(po)
+
+
+class ContactModelTests(TestCase):
+    def test_str_includes_organization(self):
+        self.assertEqual(str(make_contact(name="Robin Lo", organization="State DEQ")), "Robin Lo (State DEQ)")
+        self.assertEqual(str(make_contact(name="Board of Commissioners", organization="")), "Board of Commissioners")
+
+    def test_user_link_is_optional_and_one_to_one(self):
+        self.assertIsNone(make_contact().user)
+        user = get_user_model().objects.create_user("dana")
+        contact = make_contact(user=user)
+        self.assertEqual(user.contact, contact)
+        with self.assertRaises(ValidationError):
+            Contact(name="Other", user=user).full_clean()
+
+    def test_deleting_user_keeps_contact(self):
+        user = get_user_model().objects.create_user("dana")
+        contact = make_contact(user=user)
+        user.delete()
+        contact.refresh_from_db()
+        self.assertIsNone(contact.user)
+
+    def test_email_validated(self):
+        with self.assertRaises(ValidationError):
+            make_contact(email="not-an-email").full_clean()

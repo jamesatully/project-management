@@ -2,10 +2,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from ..models import Project, Vendor
+from ..models import Contact, Project, Vendor
 from ..resources import REGISTRY
 from .factories import (
-    make_compliance_unit, make_document, make_field_report, make_invoice, make_po, make_project, make_vendor,
+    make_compliance_unit, make_contact, make_document, make_field_report, make_invoice, make_po, make_project,
+    make_vendor,
 )
 
 
@@ -23,6 +24,7 @@ class ViewTests(TestCase):
             "fieldreport": make_field_report(self.project),
             "document": make_document(self.project),
             "complianceunit": make_compliance_unit(),
+            "contact": make_contact(user=self.user, email="jordan@agency.example"),
         }
 
     def test_login_required(self):
@@ -104,3 +106,43 @@ class ViewTests(TestCase):
         vendor = make_vendor(name="Unused Vendor")
         self.client.post(reverse("pm:vendor-delete", args=[vendor.pk]))
         self.assertFalse(Vendor.objects.filter(pk=vendor.pk).exists())
+
+
+class ContactViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("tester", password="pw-123456!")
+        self.client.force_login(self.user)
+        self.staff = make_contact(name="Dana Staff", organization="Utility", contact_type="INTERNAL", user=self.user)
+        self.outside = make_contact(name="Robin Regulator", email="robin@agency.example")
+
+    def test_detail_shows_user_and_email(self):
+        response = self.client.get(self.staff.get_absolute_url())
+        self.assertContains(response, "tester")  # linked account, shown as plain text (users have no page)
+        response = self.client.get(self.outside.get_absolute_url())
+        self.assertContains(response, 'href="mailto:robin@agency.example"')
+
+    def test_list_filters(self):
+        url = reverse("pm:contact-list")
+        self.assertContains(self.client.get(url), "Contacts")
+        response = self.client.get(url, {"contact_type": "INTERNAL"})
+        self.assertContains(response, "Dana Staff")
+        self.assertNotContains(response, "Robin Regulator")
+        response = self.client.get(url, {"has_user": "false"})
+        self.assertContains(response, "Robin Regulator")
+        self.assertNotContains(response, "Dana Staff")
+        self.assertContains(self.client.get(url, {"q": "regulator"}), "Robin Regulator")
+
+    def test_create_contact_without_user(self):
+        response = self.client.post(reverse("pm:contact-create"), {
+            "name": "Casey Neighbor", "organization": "Northside Neighborhood Association", "contact_type": "EXTERNAL",
+        })
+        contact = Contact.objects.get(name="Casey Neighbor")
+        self.assertRedirects(response, contact.get_absolute_url())
+        self.assertIsNone(contact.user)
+
+    def test_user_can_only_link_to_one_contact(self):
+        response = self.client.post(reverse("pm:contact-create"), {
+            "name": "Someone Else", "contact_type": "INTERNAL", "user": self.user.pk,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already exists")

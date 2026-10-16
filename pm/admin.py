@@ -1,12 +1,20 @@
 from django.contrib import admin
 
-from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
     list_display = ["name", "primary_contact_name", "primary_contact_phone", "website"]
     search_fields = ["name", "primary_contact_name"]
+
+
+@admin.register(Contact)
+class ContactAdmin(admin.ModelAdmin):
+    list_display = ["name", "title", "organization", "contact_type", "email", "phone", "user"]
+    list_filter = ["contact_type"]
+    search_fields = ["name", "title", "organization", "email"]
+    autocomplete_fields = ["user"]
 
 
 @admin.register(ComplianceUnit)

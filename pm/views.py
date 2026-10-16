@@ -249,7 +249,7 @@ class ResourceDetailView(ResourceMixin, generic.DetailView):
         ctx["related_tables"] = []
         for rel in self.resource.related:
             child = REGISTRY[rel.resource]
-            table = build_table(child, getattr(obj, rel.accessor).all(), exclude=[rel.fk_name], next_url=here)
+            table = build_table(child, getattr(obj, rel.accessor).all(), exclude=[rel.fk_name, *rel.exclude], next_url=here)
             table["add_url"] = f"{reverse(f'pm:{child.key}-create')}?{urlencode({rel.fk_name: obj.pk, 'next': here})}"
             table["all_url"] = f"{reverse(f'pm:{child.key}-list')}?{rel.fk_name}={obj.pk}"
             ctx["related_tables"].append(table)

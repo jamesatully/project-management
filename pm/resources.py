@@ -9,20 +9,20 @@ configuration, so adding a model to the UI is mostly a matter of adding an
 entry here.
 
 Other apps extend the UI without ``pm`` importing them: call :func:`register`,
-:func:`register_tab` and :func:`register_dashboard_panel` from their
+:func:`register_related`, :func:`register_tab` and :func:`register_dashboard_panel` from their
 ``AppConfig.ready()`` (see ``planning/apps.py``).
 
 Column ``kind`` values (rendered by ``pm.templatetags.pm_tags.cell``):
 ``link`` (links to the detail page), ``text``, ``money``, ``date``,
 ``status`` (coloured badge), ``fk`` (links to the related object's page),
 ``hours``, ``score`` (1-25 risk score badge), ``month`` (e.g. "Sep 2026"),
-``days`` (signed day variance), ``links`` (a list of records, each linked). A column may name a model property instead of
+``days`` (signed day variance), ``links`` (a list of records, each linked), ``email`` (mailto link). A column may name a model property instead of
 a field; such columns are not sortable.
 """
 from dataclasses import dataclass, field
 
 from . import filters, forms
-from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 @dataclass(frozen=True)
@@ -39,6 +39,7 @@ class Related:
     accessor: str  # reverse relation name on the parent, e.g. "purchase_orders"
     resource: str  # key of the child resource in REGISTRY
     fk_name: str  # name of the FK on the child pointing back at the parent
+    exclude: tuple = ()  # further child columns to hide (the FK column is always hidden)
 
 
 @dataclass(frozen=True)
@@ -210,6 +211,23 @@ REGISTRY = {
                 Related("invoices", "invoice", "vendor"),
             ],
         ),
+        Resource(
+            key="contact",
+            url_prefix="contacts",
+            model=Contact,
+            form_class=forms.ContactForm,
+            filterset_class=filters.ContactFilter,
+            icon="contact",
+            columns=[
+                Column("name", "Name", "link"),
+                Column("title", "Title"),
+                Column("organization", "Organization"),
+                Column("contact_type", "Type"),
+                Column("phone", "Phone"),
+            ],
+            search_fields=["name", "title", "organization", "role_description", "email"],
+            select_related=["user"],
+        ),
     ]
 }
 
@@ -225,6 +243,11 @@ DASHBOARD_PANELS = []
 def register(resource):
     """Add a resource (generic list/detail/create/edit/delete pages and API-style filtering)."""
     REGISTRY[resource.key] = resource
+
+
+def register_related(resource_key, related):
+    """Add a related table to another resource's detail page, e.g. a contact's stakeholder roles."""
+    REGISTRY[resource_key].related.append(related)
 
 
 def register_tab(resource_key, tab):
