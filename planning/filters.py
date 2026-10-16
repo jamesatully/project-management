@@ -1,5 +1,6 @@
 """FilterSets shared by the planning API and list pages."""
 import django_filters
+from django import forms
 
 from .models import ActivityNote, CommunicationItem, Milestone, Objective, ProjectPlan, Risk, Stakeholder
 
@@ -25,9 +26,12 @@ class RiskFilter(django_filters.FilterSet):
 
 
 class StakeholderFilter(django_filters.FilterSet):
+    # The contact directory is too long for a dropdown; "View all" on a contact page passes its ID.
+    contact = django_filters.UUIDFilter(widget=forms.HiddenInput)
+
     class Meta:
         model = Stakeholder
-        fields = ["project", "influence", "interest"]
+        fields = ["project", "contact", "influence", "interest"]
 
 
 class MilestoneFilter(django_filters.FilterSet):

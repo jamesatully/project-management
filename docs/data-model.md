@@ -26,6 +26,26 @@ documents linked to the unit.
 | `name` | text, **unique** | Unit name. |
 | `unit_type` | choice | `WATER_USE_PERMIT`, `PUBLIC_WATER_SUPPLY`, `WASTEWATER`, `TANK`, `STORMWATER`, `OTHER` |
 
+## Contact
+
+The shared address book: people (and groups such as a board or neighborhood
+association) the utility works with, internal or external. Planning
+stakeholders reference contacts, so a person is entered once and reused across
+projects. Some contacts are app users; most aren't.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | text | Full name, or a group's name. Not unique (people share names). |
+| `title` | text | Job title. optional |
+| `organization` | text | optional |
+| `contact_type` | choice | `INTERNAL` (works for the utility) or `EXTERNAL` (default) |
+| `role_description` | long text | Their role in their organization. optional |
+| `email` | email | optional |
+| `phone` | text | optional |
+| `user` | one-to-one → User | optional. Each user account links to at most one contact. Deleting the user keeps the contact (link cleared). |
+
+A contact can't be deleted while it is a stakeholder on any project.
+
 ## Vendor
 
 | Field | Type | Notes |
@@ -101,6 +121,11 @@ documents reference them.
   needed (rolling back converts both CIP types back to CIP).
 - **Compliance units** added; **documents** can link to projects, compliance
   units, purchase orders and invoices (previously projects only).
+- **Contacts** added. Planning stakeholders now link to a contact instead of
+  storing name / organization / contact details themselves. Migrations
+  `planning.0002`–`0003` create one contact per distinct name + organization
+  (as *External*; mark utility staff *Internal* afterwards) and keep the first
+  phone or email seen. Rolling back copies the details back onto stakeholders.
 
 ## Additions beyond the original spec
 
@@ -109,6 +134,8 @@ if they don't fit the target enterprise model:
 
 - `PurchaseOrder.project` (optional FK) — links commitments to a project.
 - `Invoice.amount` — needed for invoiced/paid totals.
+- `Contact.contact_type`, `email`, `phone` — internal/external filtering, and a
+  home for the contact details stakeholders used to carry.
 
 Status and document-type choice lists were also chosen for this demo and are
 easy to change in `pm/models.py` (then run `makemigrations`).

@@ -11,7 +11,7 @@ removed independently; `pm` never imports it.
 | Problem statement, scope | `ProjectPlan` | One per project. *In scope* and *Out of scope* are separate fields so exclusions are explicit. Status: Draft → In Review → Approved (approval needs an approver name and date). |
 | Objectives | `Objective` | Description, success measure, target date, status (Not Started / On Track / At Risk / Achieved / Not Achieved), display order. |
 | Risk register | `Risk` | Title, category, likelihood (1–5) × impact (1–5) = **score** (1–25, computed), owner, mitigation, status (Open / Mitigating / Closed), identified and next-review dates. Scores ≥ 15 are *High*, 8–14 *Medium*, < 8 *Low*. |
-| Stakeholders | `Stakeholder` | Name, organization, role, influence and interest (High/Medium/Low), contact, engagement notes. The **engagement strategy** (Manage closely / Keep satisfied / Keep informed / Monitor) is derived from the influence–interest grid. |
+| Stakeholders | `Stakeholder` | A **contact** (from the shared directory in `pm`; who they are, their organization and contact details live there), their role on this project, influence and interest (High/Medium/Low), engagement notes. A contact can be a stakeholder on many projects but only once per project. The **engagement strategy** (Manage closely / Keep satisfied / Keep informed / Monitor) is derived from the influence–interest grid. |
 | Milestones | `Milestone` | Planned (baseline), forecast and actual dates; **variance** in days is derived; status (Not Started / In Progress / At Risk / Complete / Missed). Complete milestones need an actual date. |
 | Communication plan | `CommunicationItem` | What, audience, method, frequency, owner, notes. |
 | Activity notes | `ActivityNote` | Monthly update, decision, issue or general note; author (free text), date, optional title, body. Monthly updates carry a reporting month and are limited to **one per project per month**. |
@@ -49,8 +49,9 @@ startup. These call `pm`'s extension points:
 |---|---|
 | `pm.resources.register(Resource(...))` | Generic list/detail/create/edit/delete pages for each planning model, and sidebar entries (`nav_group="Planning"`). |
 | `pm.resources.register_tab("project", Tab(...))` | The Plan and Activity tabs on project pages. |
+| `pm.resources.register_related("contact", Related(...))` | A contact's stakeholder roles on their contact page. |
 | `pm.resources.register_dashboard_panel(fn)` | The two dashboard panels. |
-| `pm.demo.EXTENSIONS.append(fn)` | Planning demo data created by `seed_demo`. |
+| `pm.demo.EXTENSIONS.append(fn)` | Planning demo data created by `seed_demo` (stakeholders reuse the generator's contact directory and add to it). |
 
 Generic form pages accept `?<field>=<value>` to pre-fill fields and
 `?next=<local url>` to return somewhere specific after saving or deleting.

@@ -26,6 +26,7 @@ Each resource supports `GET` (list), `POST` (create), and on `/<id>/`:
 | Invoices | `/api/invoices/` | `status`, `vendor`, `purchase_order`, `project`, `invoice_date_after`, `invoice_date_before` | invoice #, vendor, PO # |
 | Field reports | `/api/field-reports/` | `project`, `report_date_after`, `report_date_before` | entered by, notes, project |
 | Compliance units | `/api/compliance-units/` | `unit_type` | name |
+| Contacts | `/api/contacts/` | `contact_type`, `has_user` (`true`/`false`), `user` (user ID) | name, title, organization, role, email |
 | Documents | `/api/documents/` | `project`, `compliance_unit`, `purchase_order`, `invoice`, `document_type`, `document_date_after`, `document_date_before` | subject, organizations, project, unit, PO #, invoice # |
 
 Planning (see [planning.md](planning.md)):
@@ -35,13 +36,15 @@ Planning (see [planning.md](planning.md)):
 | Plans | `/api/plans/` | `status`, `project` | project, problem statement, scope |
 | Objectives | `/api/objectives/` | `project`, `status` | description, success measure |
 | Risks | `/api/risks/` | `project`, `status`, `category`, `score_min` | title, description, mitigation, owner |
-| Stakeholders | `/api/stakeholders/` | `project`, `influence`, `interest` | name, organization, role |
+| Stakeholders | `/api/stakeholders/` | `project`, `contact`, `influence`, `interest` | — |
 | Milestones | `/api/milestones/` | `project`, `status`, `planned_date_after`, `planned_date_before` | name |
 | Communication items | `/api/communication-items/` | `project`, `method`, `frequency` | purpose, audience, owner |
 | Activity notes | `/api/activity-notes/` | `project`, `note_type`, `note_date_after`, `note_date_before` | title, body, author |
 
 Risk `score`, stakeholder `engagement_strategy` and milestone `variance_days`
-are read-only computed fields. A monthly note's `period` may be any date in the
+are read-only computed fields. Stakeholders are written with a `contact` ID and
+return the contact's `contact_name` and `organization`; a contact can appear
+only once per project. Contacts return `username` for a linked user. A monthly note's `period` may be any date in the
 month; it is stored as the 1st.
 
 Also on every list: `?ordering=<field>` (prefix `-` for descending) and

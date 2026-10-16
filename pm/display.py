@@ -88,6 +88,8 @@ def infer_kind(field):
         return "date"
     if isinstance(field, models.URLField):
         return "url"
+    if isinstance(field, models.EmailField):
+        return "email"
     if isinstance(field, models.TextField):
         return "multiline"
     if field.name == "time_on_site":
@@ -121,6 +123,8 @@ def render_value(obj, name, kind="text"):
             '<a href="{}" class="font-medium text-primary hover:underline">{}</a>', obj.get_absolute_url(), text
         )
     if kind == "fk":
+        if not hasattr(value, "get_absolute_url"):  # e.g. a user account, which has no page here
+            return str(value)
         return format_html('<a href="{}" class="hover:text-primary hover:underline">{}</a>', value.get_absolute_url(), value)
     if kind == "money":
         return money(value)
@@ -146,6 +150,8 @@ def render_value(obj, name, kind="text"):
         return f"{value.normalize():f} h"
     if kind == "url":
         return format_html('<a href="{0}" target="_blank" rel="noopener" class="text-primary hover:underline">{0}</a>', value)
+    if kind == "email":
+        return format_html('<a href="mailto:{0}" class="text-primary hover:underline">{0}</a>', value)
     if kind == "multiline":
         return linebreaksbr(value, autoescape=True)
     if field is not None and field.choices:

@@ -11,11 +11,15 @@ Relationships::
     Document ──> Project, ComplianceUnit, PurchaseOrder, Invoice
                  (each optional; at least one required)
 
+    Contact ──> (optional) User
+
+
 Every model uses a UUID primary key and carries ``created_at`` / ``updated_at``
 audit timestamps via :class:`BaseModel`.
 """
 import uuid
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
@@ -65,6 +69,49 @@ class Vendor(BaseModel):
 
     def __str__(self):
         return self.name
+
+
+class Contact(BaseModel):
+    """
+    A person (or group) the utility deals with, inside or outside the organization.
+
+    Contacts are the shared address book: other apps reference them, e.g. planning
+    stakeholders. A contact may be linked to an app user account, but most aren't.
+    """
+
+    class ContactType(models.TextChoices):
+        INTERNAL = "INTERNAL", "Internal"
+        EXTERNAL = "EXTERNAL", "External"
+
+    name = models.CharField(max_length=200, help_text="Person's full name, or a group such as a board or committee.")
+    title = models.CharField("job title", max_length=200, blank=True)
+    organization = models.CharField(max_length=200, blank=True)
+    contact_type = models.CharField(
+        "internal / external", max_length=10, choices=ContactType.choices, default=ContactType.EXTERNAL,
+        help_text="Internal: works for the utility. External: agencies, consultants, contractors, the public.",
+    )
+    role_description = models.TextField(
+        "role in organization", blank=True, help_text="What they do and what they're responsible for."
+    )
+    email = models.EmailField(blank=True)
+    phone = models.CharField("phone number", max_length=40, blank=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="app user",
+        on_delete=models.SET_NULL,
+        related_name="contact",
+        null=True,
+        blank=True,
+        help_text="App user account for this person, if they have one.",
+    )
+
+    url_name = "contact"
+
+    class Meta:
+        ordering = ["name", "organization"]
+
+    def __str__(self):
+        return f"{self.name} ({self.organization})" if self.organization else self.name
 
 
 class ComplianceUnit(BaseModel):

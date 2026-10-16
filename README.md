@@ -15,7 +15,10 @@ documents. Every record is also available through a documented REST API.
 - **List / detail / create / edit / delete** pages for every record type, with
   search, filters, sortable columns and pagination.
 - **Related records on detail pages**: a project shows its POs, field reports and
-  documents; a vendor shows its POs and invoices; a PO shows its invoices.
+  documents; a vendor shows its POs and invoices; a PO shows its invoices; a
+  contact shows the projects they're a stakeholder on.
+- **Contacts**: a shared directory of internal and external people, optionally
+  linked to app user accounts; planning stakeholders are chosen from it.
 - **REST API** for all data, with interactive docs (Swagger UI and ReDoc) and an
   OpenAPI schema.
 - **Business rules** enforced the same way in forms and the API (e.g. an invoice's
@@ -45,7 +48,7 @@ Open <http://localhost:8000> and sign in.
 
 Load a fictitious water/wastewater utility dataset — about 100 projects (water
 mains, sewer rehab, treatment plant upgrades, reservoirs, studies,
-environmental and developer projects), 10 project managers, 50 vendors, 17 compliance units
+environmental and developer projects), 10 project managers, 50 vendors, ~130 contacts, 17 compliance units
 (treatment systems, water use permits, tanks, stormwater programs), ~250
 purchase orders, several thousand monthly invoices, project field reports and
 correspondence, and a plan for nearly every project with objectives, risks,
@@ -64,7 +67,7 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 | URL | What |
 |---|---|
 | `/` | Dashboard |
-| `/projects/`, `/compliance-units/`, `/vendors/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
+| `/projects/`, `/compliance-units/`, `/vendors/`, `/contacts/`, `/purchase-orders/`, `/invoices/`, `/field-reports/`, `/documents/` | Data pages |
 | `/projects/<id>/plan/`, `/projects/<id>/activity/` | A project's plan and activity notes |
 | `/plans/`, `/risks/`, `/milestones/`, `/activity/` | Planning lists across all projects |
 | `/api/` | Browsable REST API |
@@ -81,12 +84,15 @@ Project ──< (optional) PurchaseOrder
    └──< FieldReport
 
 Document ──> Project, Compliance Unit, Purchase Order, Invoice   (any combination, at least one)
+
+Contact ──> (optional) User          planning Stakeholder ──> Project, Contact
 ```
 
 | Model | Key fields |
 |---|---|
 | **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP Expansion / CIP R&R / Development), status, project manager |
 | **Compliance Unit** | unit name (e.g. *Northwest Wastewater Treatment System*), unit type (Water Use Permit / Public Water Supply / Wastewater / Tank / Stormwater / Other) |
+| **Contact** | name, job title, organization, internal/external, role in organization, email, phone, app user *(optional)* |
 | **Vendor** | name, mailing address, website, primary contact name and phone |
 | **Purchase Order** | PO number, status, amount, vendor, project *(optional)*, contract number, start/end dates |
 | **Invoice** | invoice number (unique per vendor), vendor, purchase order, status, amount, invoice/received/paid dates |

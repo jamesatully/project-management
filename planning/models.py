@@ -18,7 +18,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from pm.models import BaseModel, Project
+from pm.models import BaseModel, Contact, Project
 
 
 class ProjectPlan(BaseModel):
@@ -128,27 +128,47 @@ class Risk(BaseModel):
 
 
 class Stakeholder(BaseModel):
+    """
+    A contact's involvement in one project. Who they are (name, organization, phone)
+    lives on the shared :class:`pm.models.Contact`; this records their project role.
+    """
+
     class Level(models.TextChoices):
         HIGH = "HIGH", "High"
         MEDIUM = "MEDIUM", "Medium"
         LOW = "LOW", "Low"
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="stakeholders")
-    name = models.CharField(max_length=200, help_text="Person or group.")
-    organization = models.CharField(max_length=200, blank=True)
+    contact = models.ForeignKey(
+        Contact, on_delete=models.PROTECT, related_name="stakeholder_roles", help_text="Person or group."
+    )
     role = models.CharField(max_length=200, blank=True, help_text="Role on or interest in the project.")
     influence = models.CharField(max_length=10, choices=Level.choices, default=Level.MEDIUM)
     interest = models.CharField(max_length=10, choices=Level.choices, default=Level.MEDIUM)
-    contact = models.CharField(max_length=200, blank=True)
     engagement_notes = models.TextField(blank=True)
 
     url_name = "stakeholder"
 
     class Meta:
-        ordering = ["project", "name"]
+        ordering = ["project", "contact__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "contact"],
+                name="one_stakeholder_entry_per_contact",
+                violation_error_message="This contact is already a stakeholder on this project.",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.name} ({self.organization})" if self.organization else self.name
+        return str(self.contact)
+
+    @property
+    def name(self):
+        return self.contact.name
+
+    @property
+    def organization(self):
+        return self.contact.organization
 
     @property
     def engagement_strategy(self):

@@ -31,7 +31,7 @@ class RiskViewSet(viewsets.ModelViewSet):
 
 
 class StakeholderViewSet(viewsets.ModelViewSet):
-    queryset = Stakeholder.objects.all()
+    queryset = Stakeholder.objects.select_related("contact")
     serializer_class = serializers.StakeholderSerializer
     filterset_class = filters.StakeholderFilter
     search_fields = ["name", "organization", "role"]

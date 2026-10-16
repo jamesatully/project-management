@@ -4,7 +4,7 @@ from io import StringIO
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
-from ..models import Invoice, Project, PurchaseOrder, Vendor
+from ..models import Contact, Invoice, Project, PurchaseOrder, Vendor
 
 
 class SeedDemoTests(TestCase):
@@ -21,6 +21,11 @@ class SeedDemoTests(TestCase):
             self.assertLessEqual(invoice.invoice_date, datetime.date(2026, 6, 30))
             if invoice.status == Invoice.Status.PAID:
                 self.assertIsNotNone(invoice.paid_date)
+        # Every vendor's primary contact is in the contact directory, alongside utility staff.
+        for vendor in Vendor.objects.all():
+            self.assertTrue(Contact.objects.filter(name=vendor.primary_contact_name, organization=vendor.name).exists())
+        self.assertTrue(Contact.objects.filter(contact_type="INTERNAL", title="Project Manager").exists())
+        self.assertFalse(Contact.objects.filter(email__isnull=False).exclude(email="").exclude(email__endswith=".example").exists())
 
     def test_refuses_to_overwrite_without_flush(self):
         self.seed()

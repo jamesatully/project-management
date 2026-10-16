@@ -6,7 +6,7 @@ field filters defined in :mod:`pm.filters`.
 from rest_framework import viewsets
 
 from .. import filters
-from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 from . import serializers
 
 
@@ -16,6 +16,14 @@ class VendorViewSet(viewsets.ModelViewSet):
     filterset_class = filters.VendorFilter
     search_fields = ["name", "primary_contact_name", "mailing_address"]
     ordering_fields = ["name", "created_at"]
+
+
+class ContactViewSet(viewsets.ModelViewSet):
+    queryset = Contact.objects.select_related("user")
+    serializer_class = serializers.ContactSerializer
+    filterset_class = filters.ContactFilter
+    search_fields = ["name", "title", "organization", "role_description", "email"]
+    ordering_fields = ["name", "organization", "contact_type", "created_at"]
 
 
 class ComplianceUnitViewSet(viewsets.ModelViewSet):

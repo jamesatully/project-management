@@ -3,9 +3,9 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from pm.tests.factories import make_project
+from pm.tests.factories import make_contact, make_project
 
-from ..models import ActivityNote, ProjectPlan, Risk, previous_month
+from ..models import ActivityNote, ProjectPlan, Risk, Stakeholder, previous_month
 
 
 class PlanningViewTests(TestCase):
@@ -72,6 +72,26 @@ class PlanningViewTests(TestCase):
         self.assertContains(response, "Bypass failure")
         self.assertContains(response, self.project.name)  # listed as missing an update
 
+    def test_contact_page_lists_stakeholder_roles(self):
+        contact = make_contact(name="Robin Regulator")
+        Stakeholder.objects.create(project=self.project, contact=contact, role="Permit reviewer")
+        response = self.client.get(contact.get_absolute_url())
+        self.assertContains(response, "Permit reviewer")
+        self.assertContains(response, self.project.name)
+        # "Add" pre-fills the contact.
+        self.assertContains(response, f"{reverse('pm:stakeholder-create')}?contact={contact.pk}")
+        response = self.client.get(self.plan_url)
+        self.assertContains(response, "Robin Regulator")
+
+    def test_add_stakeholder_from_plan_tab(self):
+        contact = make_contact()
+        url = f"{reverse('pm:stakeholder-create')}?project={self.project.pk}&next={self.plan_url}"
+        data = {"project": self.project.pk, "contact": contact.pk, "role": "Reviewer", "influence": "HIGH",
+                "interest": "LOW"}
+        self.assertRedirects(self.client.post(url, data), self.plan_url, fetch_redirect_response=False)
+        response = self.client.post(url, data)  # same contact twice on one project
+        self.assertContains(response, "already a stakeholder on this project")
+
     def test_all_planning_pages_render(self):
         plan = ProjectPlan.objects.create(project=self.project)
         risk = Risk.objects.create(project=self.project, title="R", category="COST", likelihood=1, impact=1)
@@ -101,6 +121,15 @@ class PlanningAPITests(TestCase):
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.data["score"], 16)
         self.assertEqual(self.client.get("/api/risks/?score_min=15").data["count"], 1)
+
+    def test_stakeholder_api(self):
+        contact = make_contact(name="Robin Lo", organization="State DEQ")
+        data = {"project": self.project.pk, "contact": contact.pk, "role": "Permit reviewer"}
+        response = self.client.post("/api/stakeholders/", data)
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual((response.data["contact_name"], response.data["organization"]), ("Robin Lo", "State DEQ"))
+        self.assertEqual(self.client.post("/api/stakeholders/", data).status_code, 400)
+        self.assertEqual(self.client.get(f"/api/stakeholders/?contact={contact.pk}").data["count"], 1)
 
     def test_monthly_note_validation(self):
         base = {"project": self.project.pk, "note_type": "MONTHLY", "author_name": "Pat", "body": "x"}

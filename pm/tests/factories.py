@@ -2,7 +2,7 @@
 import datetime
 from decimal import Decimal
 
-from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 def make_vendor(**kw):
@@ -18,6 +18,11 @@ def make_project(**kw):
         "project_manager": "Pat Example",
     }
     return Project.objects.create(**{**defaults, **kw})
+
+
+def make_contact(**kw):
+    defaults = {"name": "Jordan Example", "title": "Permit Coordinator", "organization": "State Agency"}
+    return Contact.objects.create(**{**defaults, **kw})
 
 
 def make_compliance_unit(**kw):

@@ -4,7 +4,7 @@ classes used throughout the UI and renders dates with the native date picker.
 """
 from django import forms
 
-from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 INPUT_CLASSES = (
     "w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-ink "
@@ -38,6 +38,12 @@ class VendorForm(StyledModelForm):
         model = Vendor
         fields = ["name", "mailing_address", "website", "primary_contact_name", "primary_contact_phone"]
         widgets = {"mailing_address": forms.Textarea(attrs={"rows": 3})}
+
+
+class ContactForm(StyledModelForm):
+    class Meta:
+        model = Contact
+        fields = ["name", "title", "organization", "contact_type", "email", "phone", "user", "role_description"]
 
 
 class ComplianceUnitForm(StyledModelForm):

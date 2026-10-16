@@ -7,7 +7,7 @@ rules as the web forms.
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from ..models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
 class ModelCleanMixin:
@@ -36,6 +36,18 @@ class VendorSerializer(serializers.ModelSerializer):
             "id", "name", "mailing_address", "website",
             "primary_contact_name", "primary_contact_phone",
             "created_at", "updated_at",
+        ]
+
+
+class ContactSerializer(serializers.ModelSerializer):
+    contact_type_display = serializers.CharField(source="get_contact_type_display", read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True, default=None)
+
+    class Meta:
+        model = Contact
+        fields = [
+            "id", "name", "title", "organization", "contact_type", "contact_type_display", "role_description",
+            "email", "phone", "user", "username", "created_at", "updated_at",
         ]
 
 

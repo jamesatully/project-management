@@ -30,7 +30,8 @@ class RiskForm(StyledModelForm):
 class StakeholderForm(StyledModelForm):
     class Meta:
         model = Stakeholder
-        fields = ["project", "name", "organization", "role", "influence", "interest", "contact", "engagement_notes"]
+        fields = ["project", "contact", "role", "influence", "interest", "engagement_notes"]
+        help_texts = {"contact": "Not listed? Add them under Contacts first."}
 
 
 class MilestoneForm(StyledModelForm):

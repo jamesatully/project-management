@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import ComplianceUnit, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 UTILITY = "Riverbend Water & Sewer Utility"
 
@@ -24,6 +24,9 @@ PROJECT_MANAGERS = [
     "Tomás Herrera", "Grace Nakamura", "Owen Fitzgerald", "Aisha Mensah", "Caleb Lindqvist",
 ]
 INSPECTORS = ["Ray Delgado", "Monica Tran", "Hank Petersen", "Sofia Alvarez", "Derek Osei", "Jill Moreau"]
+UTILITY_DOMAIN = "riverbendwater.example"
+UTILITY_PHONE = "(503) 555-0123"  # main line; staff have extensions
+ENGINEERING = f"{UTILITY} — Engineering"
 
 STREETS = [
     "Oak Street", "Maple Avenue", "Riverside Drive", "Harbor Boulevard", "Cedar Lane", "Elm Street",
@@ -329,6 +332,28 @@ COMPLIANCE_RECORDS = {
 }
 INVOICE_RETURN_REASONS = ["missing backup documentation", "quantities exceed approved schedule of values",
                           "missing lien releases", "incorrect PO number"]
+
+# Contact directory: job title -> what the person does (contacts' "role in organization").
+ROLE_DESCRIPTIONS = {
+    "Project Manager": "Manages capital projects from planning through closeout: scope, schedule, budget, consultant "
+                       "and contractor coordination, and monthly status reporting.",
+    "Construction Inspector": "Inspects contractor work in the field for compliance with plans and specifications, "
+                              "writes daily field reports and verifies pay quantities.",
+    "Principal-in-Charge": "Firm principal responsible for the contract; signs agreements and amendments and "
+                           "resolves escalated issues.",
+    "Project Engineer": "Day-to-day lead for the firm's work: deliverables, schedule and the utility's review comments.",
+    "Account Manager": "Handles quotes, orders, delivery schedules and invoicing for the utility's account.",
+    "Operations Manager": "Runs the company's field crews and equipment; first contact for schedule and staffing.",
+    "Senior Scientist": "Leads field surveys, sampling and permit documentation; prepares technical memoranda.",
+    "Laboratory Manager": "Oversees testing and sample analysis; issues certified results and chain-of-custody records.",
+}
+VENDOR_CONTACT_TITLES = {
+    "engineering": ["Principal-in-Charge", "Project Engineer"],
+    "contractor": ["Operations Manager"],
+    "environmental": ["Senior Scientist"],
+    "lab": ["Laboratory Manager"],
+    "supplier": ["Account Manager"],
+}
 
 AGENCIES = ["State Department of Environmental Quality", "County Health Department — Drinking Water Program",
             "City of Riverbend Planning Department", "County Public Works", "State Fish and Wildlife Agency"]
@@ -672,6 +697,39 @@ class Generator:
         return reports
 
     # -- documents -------------------------------------------------------------
+    # -- contacts ----------------------------------------------------------------
+    def email(self, name, domain):
+        local = "".join(c for c in name.lower().replace(" ", ".") if c.isalpha() or c == ".")
+        return f"{local}@{domain}"
+
+    def make_contacts(self):
+        """
+        A directory of utility staff and vendor contacts, in ``self.contacts`` keyed
+        by (name, organization) so extensions (planning stakeholders) can reuse them.
+        Uses its own random stream so the rest of the dataset doesn't shift.
+        """
+        rng = random.Random(self.seed * 31 + 5)
+        contacts = []
+        for names, title in [(PROJECT_MANAGERS, "Project Manager"), (INSPECTORS, "Construction Inspector")]:
+            for name in names:
+                contacts.append(Contact(
+                    name=name, title=title, organization=ENGINEERING, contact_type=Contact.ContactType.INTERNAL,
+                    role_description=ROLE_DESCRIPTIONS[title], email=self.email(name, UTILITY_DOMAIN),
+                    phone=f"{UTILITY_PHONE} ext. {rng.randint(200, 499)}",
+                ))
+        for vendors in self.vendors.values():
+            for vendor in vendors:
+                title = rng.choice(VENDOR_CONTACT_TITLES[vendor.category])
+                contacts.append(Contact(
+                    name=vendor.primary_contact_name, title=title, organization=vendor.name,
+                    contact_type=Contact.ContactType.EXTERNAL, role_description=ROLE_DESCRIPTIONS[title],
+                    email=self.email(vendor.primary_contact_name, vendor.website.split("www.", 1)[1]),
+                    phone=vendor.primary_contact_phone,
+                ))
+        Contact.objects.bulk_create(contacts)
+        self.contacts = {(c.name, c.organization): c for c in contacts}
+        return contacts
+
     # -- compliance units --------------------------------------------------------
     def make_compliance_units(self):
         units = [ComplianceUnit(name=name, unit_type=unit_type) for name, unit_type in COMPLIANCE_UNITS]
@@ -858,10 +916,11 @@ class Generator:
         reports = self.make_field_reports(plans)
         units = self.make_compliance_units()
         documents = self.make_documents(plans, pos, invoices)
+        contacts = self.make_contacts()
         counts = {
             "vendors": len(vendors), "projects": len(plans), "purchase orders": len(pos),
             "invoices": len(invoices), "field reports": len(reports), "compliance units": len(units),
-            "documents": len(documents),
+            "documents": len(documents), "contacts": len(contacts),
         }
         for extension in EXTENSIONS:
             counts.update(extension(self, plans))

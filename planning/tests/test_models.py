@@ -1,9 +1,10 @@
 import datetime
 
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.test import TestCase
 
-from pm.tests.factories import make_project
+from pm.tests.factories import make_contact, make_project
 
 from ..models import ActivityNote, Milestone, ProjectPlan, Risk, Stakeholder, previous_month
 
@@ -39,8 +40,26 @@ class PlanningModelTests(TestCase):
         self.assertEqual(m.variance_days, -2)
 
     def test_stakeholder_engagement_strategy(self):
-        s = Stakeholder(project=self.project, name="Board", influence="HIGH", interest="LOW")
+        s = Stakeholder(project=self.project, contact=make_contact(), influence="HIGH", interest="LOW")
         self.assertEqual(s.engagement_strategy, "Keep satisfied")
+
+    def test_stakeholder_identity_comes_from_contact(self):
+        contact = make_contact(name="Robin Lo", organization="State DEQ")
+        s = Stakeholder.objects.create(project=self.project, contact=contact, role="Permit reviewer")
+        self.assertEqual(str(s), "Robin Lo (State DEQ)")
+        self.assertEqual(s.organization, "State DEQ")
+        # The same contact can be a stakeholder on many projects, but only once per project.
+        Stakeholder(project=make_project(project_id="2022-1-1-0"), contact=contact).full_clean()
+        with self.assertRaises(ValidationError):
+            Stakeholder(project=self.project, contact=contact).full_clean()
+
+    def test_contact_protected_while_a_stakeholder(self):
+        contact = make_contact()
+        Stakeholder.objects.create(project=self.project, contact=contact)
+        with self.assertRaises(ProtectedError):
+            contact.delete()
+        self.project.delete()  # removing the project removes its stakeholders, freeing the contact
+        contact.delete()
 
     def test_monthly_note_period_normalized_and_unique(self):
         note = ActivityNote(project=self.project, period=datetime.date(2026, 9, 17), author_name="Dana", body="x")

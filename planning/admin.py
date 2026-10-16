@@ -31,8 +31,10 @@ class RiskAdmin(ProjectChildAdmin):
 
 @admin.register(Stakeholder)
 class StakeholderAdmin(ProjectChildAdmin):
-    list_display = ["name", "organization", "project", "influence", "interest"]
-    search_fields = ["name", "organization"]
+    list_display = ["contact", "project", "role", "influence", "interest"]
+    list_select_related = ["project", "contact"]
+    search_fields = ["contact__name", "contact__organization", "role"]
+    autocomplete_fields = ["project", "contact"]
 
 
 @admin.register(Milestone)
