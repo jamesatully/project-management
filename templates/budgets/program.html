@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load pm_tags budget_tags %}
+{% block title %}Program Budget · FY{{ cycle }}{% endblock %}
+{% block page_title %}Program Budget{% endblock %}
+
+{% block content %}
+<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h2 class="text-2xl font-semibold text-ink dark:text-white">FY{{ cycle }} {{ report.basis_label }} Capital Program</h2>
+    <p class="mt-1 max-w-3xl text-sm">
+      {% if basis == "adopted" %}Each project's latest <span class="font-medium">approved</span> budget as of the FY{{ cycle }} cycle.{% else %}Each project's latest budget as of the FY{{ cycle }} cycle, <span class="font-medium">including drafts and submissions</span> (rejected versions excluded).{% endif %}
+      Projects not updated this cycle carry their previous budget forward. Cancelled projects and projects with nothing budgeted from FY{{ cycle }} on are left out.
+    </p>
+  </div>
+  <a href="{{ api_url }}" class="text-sm font-medium text-primary hover:underline">As JSON (API)</a>
+</div>
+
+{# ---------- Options ---------- #}
+<form method="get" class="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-stroke bg-white p-4 shadow-card dark:border-strokedark dark:bg-boxdark">
+  <div class="w-40">
+    <label for="cycle" class="mb-1.5 block text-xs font-medium">Budget cycle</label>
+    <select id="cycle" name="cycle" class="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-ink outline-none focus:border-primary dark:border-strokedark dark:bg-boxdark-2 dark:text-white">
+      {% for c in cycles %}<option value="{{ c }}" {% if c == cycle %}selected{% endif %}>FY{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <fieldset>
+    <legend class="mb-1.5 block text-xs font-medium">Basis</legend>
+    <div class="inline-flex rounded-lg border border-stroke p-0.5 dark:border-strokedark">
+      {% for key, label in bases %}
+      <label class="cursor-pointer">
+        <input type="radio" name="basis" value="{{ key }}" class="peer sr-only" {% if key == basis %}checked{% endif %}>
+        <span class="block rounded-md px-4 py-2 text-sm font-medium peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40">{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <div class="w-48">
+    <label for="program" class="mb-1.5 block text-xs font-medium">Program</label>
+    <select id="program" name="program" class="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-ink outline-none focus:border-primary dark:border-strokedark dark:bg-boxdark-2 dark:text-white">
+      <option value="">All programs</option>
+      {% for value, label in programs %}<option value="{{ value }}" {% if value == program %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="rounded-lg border border-stroke px-4 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Show</button>
+</form>
+
+{% if not report.programs %}
+<section class="rounded-lg border border-stroke bg-white p-10 text-center shadow-card dark:border-strokedark dark:bg-boxdark">
+  <h3 class="text-lg font-semibold text-ink dark:text-white">Nothing budgeted</h3>
+  <p class="mt-1">No {{ report.basis_label|lower }} project budgets have costs from FY{{ cycle }} on.</p>
+</section>
+{% else %}
+
+{# ---------- Headline figures ---------- #}
+<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
+  <div class="rounded-lg border border-stroke bg-white p-5 shadow-card dark:border-strokedark dark:bg-boxdark">
+    <p class="text-sm">FY{{ cycle }} budget</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-ink dark:text-white">{{ report.totals.first_year|whole_amount }}</p>
+  </div>
+  <div class="rounded-lg border border-stroke bg-white p-5 shadow-card dark:border-strokedark dark:bg-boxdark">
+    <p class="text-sm">5-year plan (FY{{ report.years|first }}–FY{{ report.years|last }})</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-ink dark:text-white">{{ report.totals.plan_total|whole_amount }}</p>
+  </div>
+  {% for p in report.programs|slice:":2" %}
+  <div class="rounded-lg border border-stroke bg-white p-5 shadow-card dark:border-strokedark dark:bg-boxdark">
+    <p class="text-sm">{{ p.label }} · 5-year</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-ink dark:text-white">{{ p.totals.plan_total|whole_amount }}</p>
+    <p class="mt-1 text-xs text-bodydark2">{{ p.projects|length }} project{{ p.projects|length|pluralize }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+{# ---------- Summary by program and by category ---------- #}
+<div class="grid grid-cols-1 gap-6">
+  <section class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+    <h3 class="px-6 pt-6 font-semibold text-ink dark:text-white">Summary by program</h3>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+          <tr><th class="px-6 py-3 font-medium">Program</th>{% include "budgets/_amount_head.html" with years=report.years show_later=show_later %}</tr>
+        </thead>
+        <tbody class="divide-y divide-stroke dark:divide-strokedark">
+          {% for p in report.programs %}
+          <tr><td class="whitespace-nowrap px-6 py-3"><a href="#{{ p.key }}" class="font-medium text-primary hover:underline">{{ p.label }}</a></td>{% include "budgets/_amount_cells.html" with row=p.totals show_later=show_later %}</tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="border-t-2 border-stroke font-semibold dark:border-strokedark">
+          <tr><td class="px-6 py-3 text-ink dark:text-white">Total</td>{% include "budgets/_amount_cells.html" with row=report.totals show_later=show_later %}</tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+    <h3 class="px-6 pt-6 font-semibold text-ink dark:text-white">Summary by category</h3>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+          <tr><th class="px-6 py-3 font-medium">Category</th>{% include "budgets/_amount_head.html" with years=report.years show_later=show_later %}</tr>
+        </thead>
+        <tbody class="divide-y divide-stroke dark:divide-strokedark">
+          {% for c in report.categories %}
+          <tr><td class="min-w-[12rem] px-6 py-3 font-medium text-ink dark:text-white">{{ c.label }}</td>{% include "budgets/_amount_cells.html" with row=c.row show_later=show_later %}</tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="border-t-2 border-stroke font-semibold dark:border-strokedark">
+          <tr><td class="px-6 py-3 text-ink dark:text-white">Total</td>{% include "budgets/_amount_cells.html" with row=report.totals show_later=show_later %}</tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  {# ---------- Projects in each program ---------- #}
+  {% for p in report.programs %}
+  <section id="{{ p.key }}" class="scroll-mt-24 rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+    <h3 class="px-6 pt-6 font-semibold text-ink dark:text-white">{{ p.label }} <span class="ml-1 font-normal text-bodydark2">({{ p.projects|length }} project{{ p.projects|length|pluralize }})</span></h3>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+          <tr>
+            <th class="px-6 py-3 font-medium">Project</th>
+            {% include "budgets/_amount_head.html" with years=report.years show_later=show_later %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stroke dark:divide-strokedark">
+          {% for r in p.projects %}
+          <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
+            <td class="min-w-[13rem] px-6 py-3">
+              <a href="{{ r.budget.get_absolute_url }}" class="font-medium text-ink hover:text-primary dark:text-white">{{ r.project.name }}</a>
+              <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-bodydark2">{{ r.project.project_id }} · FY{{ r.budget.budget_year }} budget {% if r.budget.status != "APPROVED" %}{{ r.budget|status_badge }}{% endif %}</span>
+            </td>
+            {% include "budgets/_amount_cells.html" with row=r.row show_later=show_later %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="border-t-2 border-stroke font-semibold dark:border-strokedark">
+          <tr><td class="px-6 py-3 text-ink dark:text-white">{{ p.label }} total</td>{% include "budgets/_amount_cells.html" with row=p.totals show_later=show_later %}</tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

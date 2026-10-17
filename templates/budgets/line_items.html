@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Edit line items · {{ budget }}{% endblock %}
+{% block page_title %}Budgets{% endblock %}
+
+{% block content %}
+<a href="{{ cancel_url }}" class="inline-flex items-center gap-1.5 text-xs font-medium hover:text-primary">
+  {% include "partials/icon.html" with name="arrow-left" size="h-3.5 w-3.5" %} Back to budget
+</a>
+<h2 class="mt-1 text-2xl font-semibold text-ink dark:text-white">Edit line items — {{ budget.name }}</h2>
+<p class="mb-5 mt-1">{{ project }}</p>
+
+<form method="post" novalidate id="line-items" class="rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  <input type="hidden" name="fy_from" value="{{ fy_from }}">
+  <input type="hidden" name="fy_to" value="{{ fy_to }}">
+
+  <p class="px-6 pt-6 text-sm">Enter each line item's cost by fiscal year (FY{{ fy_from }} runs Oct 1, {{ fy_from|add:"-1" }} – Sep 30, {{ fy_from }}). Leave a year blank for no cost. Add years at either end with the <span class="font-medium">+</span> buttons.</p>
+
+  {% if formset.non_form_errors or formset.total_error_count %}
+  <div class="mx-6 mt-4 rounded-md border-l-4 border-danger bg-rose-50 px-4 py-3 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
+    {% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}
+    {% for form in formset %}{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}{% endfor %}
+    <p>Please correct the highlighted fields.</p>
+  </div>
+  {% endif %}
+
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-whiten text-xs uppercase text-body dark:bg-boxdark-2 dark:text-bodydark2">
+        <tr>
+          <th class="py-3 pl-6 pr-2 font-medium">Category</th>
+          <th class="px-2 py-3 font-medium">Description</th>
+          {% for fy in years %}
+          <th class="whitespace-nowrap px-2 py-3 text-right font-medium">
+            <span class="inline-flex items-center gap-1">
+              {% if forloop.first %}<button type="submit" name="add_year" value="before" class="rounded px-1.5 text-base leading-none text-primary hover:bg-primary/10" title="Add FY{{ fy|add:'-1' }}" aria-label="Add FY{{ fy|add:'-1' }}">+</button>{% endif %}
+              FY{{ fy }}
+              {% if forloop.last %}<button type="submit" name="add_year" value="after" class="rounded px-1.5 text-base leading-none text-primary hover:bg-primary/10" title="Add FY{{ fy|add:'1' }}" aria-label="Add FY{{ fy|add:'1' }}">+</button>{% endif %}
+            </span>
+          </th>
+          {% endfor %}
+          <th class="whitespace-nowrap px-2 py-3 text-right font-medium">Total</th>
+          <th class="py-3 pl-2 pr-6 text-center font-medium">Remove</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stroke dark:divide-strokedark">
+        {% for form in formset %}
+        <tr class="align-top" data-row>
+          <td class="py-3 pl-6 pr-2">
+            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            {{ form.category }}
+            {% for e in form.category.errors %}<p class="mt-1 text-xs text-danger">{{ e }}</p>{% endfor %}
+          </td>
+          <td class="px-2 py-3">{{ form.description }}</td>
+          {% for field in form.amount_fields %}
+          <td class="px-2 py-3">
+            {{ field }}
+            {% for e in field.errors %}<p class="mt-1 text-xs text-danger">{{ e }}</p>{% endfor %}
+          </td>
+          {% endfor %}
+          <td class="whitespace-nowrap px-2 py-3 pt-5 text-right font-medium tabular-nums text-ink dark:text-white" data-row-total>—</td>
+          <td class="py-3 pl-2 pr-6 pt-5 text-center">
+            {% if form.instance.pk %}
+            <label class="inline-flex cursor-pointer items-center" title="Remove this line item">
+              <input type="checkbox" name="{{ form.DELETE.html_name }}" {% if form.DELETE.value %}checked{% endif %} class="h-4 w-4 rounded border-stroke text-danger dark:border-strokedark dark:bg-boxdark-2">
+              <span class="sr-only">Remove</span>
+            </label>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-stroke font-semibold text-ink dark:border-strokedark dark:text-white">
+        <tr>
+          <td class="py-3 pl-6 pr-2" colspan="2">
+            <button type="submit" name="add_row" value="1" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              {% include "partials/icon.html" with name="plus" size="h-4 w-4" %} Add line item
+            </button>
+          </td>
+          {% for fy in years %}<td class="whitespace-nowrap px-2 py-3 text-right tabular-nums" data-year-total="{{ fy }}">—</td>{% endfor %}
+          <td class="whitespace-nowrap px-2 py-3 text-right tabular-nums text-primary dark:text-primary-dark" data-grand-total>—</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="flex flex-wrap items-center justify-end gap-3 border-t border-stroke px-6 py-5 dark:border-strokedark">
+    <p class="mr-auto text-xs text-bodydark2">Blank rows are ignored. Ticking <span class="font-medium">Remove</span> deletes the line item and its amounts when you save.</p>
+    <a href="{{ cancel_url }}" class="rounded-lg border border-stroke px-5 py-2.5 font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2">Cancel</a>
+    <button type="submit" class="rounded-lg bg-primary px-5 py-2.5 font-medium text-white hover:bg-primary/90">Save line items</button>
+  </div>
+</form>
+
+<script>
+  // Live row, year and grand totals while editing (the server recalculates on save).
+  (function () {
+    const form = document.getElementById("line-items");
+    const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+    const show = (el, value) => { el.textContent = value ? fmt.format(value) : "—"; };
+    function recalc() {
+      const years = {};
+      let grand = 0;
+      form.querySelectorAll("[data-row]").forEach((row) => {
+        const removed = row.querySelector("input[type=checkbox]")?.checked;
+        let total = 0;
+        row.querySelectorAll("input[data-fy]").forEach((input) => {
+          const value = removed ? 0 : parseFloat(input.value) || 0;
+          total += value;
+          years[input.dataset.fy] = (years[input.dataset.fy] || 0) + value;
+        });
+        grand += total;
+        show(row.querySelector("[data-row-total]"), total);
+        row.classList.toggle("opacity-50", !!removed);
+      });
+      form.querySelectorAll("[data-year-total]").forEach((cell) => show(cell, years[cell.dataset.yearTotal]));
+      show(form.querySelector("[data-grand-total]"), grand);
+    }
+    form.addEventListener("input", recalc);
+    form.addEventListener("change", recalc);
+    recalc();
+  })();
+</script>
+{% endblock %}

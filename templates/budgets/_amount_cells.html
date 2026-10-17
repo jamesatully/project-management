@@ -1,0 +1,6 @@
+{% load budget_tags %}{# Prior / per-year / 5-year / later / total cells for a rollup.Row; "Later" only when show_later. #}
+<td class="whitespace-nowrap px-3 py-3 text-right tabular-nums text-bodydark2">{{ row.prior|whole_amount }}</td>
+{% for v in row.year_values %}<td class="whitespace-nowrap px-3 py-3 text-right tabular-nums">{{ v|whole_amount }}</td>{% endfor %}
+<td class="whitespace-nowrap bg-whiten/70 px-3 py-3 text-right font-medium tabular-nums text-ink dark:bg-boxdark-2/60 dark:text-white">{{ row.plan_total|whole_amount }}</td>
+{% if show_later %}<td class="whitespace-nowrap px-3 py-3 text-right tabular-nums">{{ row.later|whole_amount }}</td>{% endif %}
+<td class="whitespace-nowrap px-3 py-3 pr-6 text-right font-medium tabular-nums text-ink dark:text-white">{{ row.total|whole_amount }}</td>

@@ -1,0 +1,6 @@
+{# Column headings matching _amount_cells.html. #}
+<th class="whitespace-nowrap px-3 py-3 text-right font-medium">Prior years</th>
+{% for fy in years %}<th class="whitespace-nowrap px-3 py-3 text-right font-medium">FY{{ fy }}</th>{% endfor %}
+<th class="whitespace-nowrap bg-stroke/40 px-3 py-3 text-right font-medium dark:bg-strokedark/40">5-year total</th>
+{% if show_later %}<th class="whitespace-nowrap px-3 py-3 text-right font-medium">Later</th>{% endif %}
+<th class="whitespace-nowrap px-3 py-3 pr-6 text-right font-medium">Total</th>

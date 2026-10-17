@@ -16,6 +16,8 @@ pm/                Core app: records, generic UI, extension points
   tests/           Model, API and view tests
 planning/          Project plans and activity notes (see planning.md);
                    plugs into pm via the hooks below
+budgets/           Versioned project budgets and the program roll-up
+                   (see budgets.md); plugs into pm the same way
 templates/         base layout, dashboard, generic resource pages, login
 docs/              This documentation
 ```
@@ -41,12 +43,15 @@ docs/              This documentation
 ## Extension points
 
 `pm` exposes a few hooks so feature apps can extend the UI without `pm`
-importing them (the `planning` app is the first user):
+importing them (used by the `planning` and `budgets` apps):
 
 - `pm.resources.register(resource)` — add a model to the generic CRUD stack
   and, via `nav_group`, to the sidebar.
 - `pm.resources.register_related(resource_key, Related(...))` — add a related
   table to another resource's detail page (contacts show their stakeholder roles).
+- `pm.resources.register_nav_link(NavLink(group, label, url_name, icon, key))` —
+  add a sidebar link to a page that isn't a resource list (budgets' *Program
+  Budget* report).
 - `pm.resources.register_tab(resource_key, Tab(label, url_name))` — add a tab
   to a detail page (project pages get *Plan* and *Activity*).
 - `pm.resources.register_dashboard_panel(fn)` — `fn(request)` returns a dict

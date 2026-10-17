@@ -41,6 +41,26 @@ Planning (see [planning.md](planning.md)):
 | Communication items | `/api/communication-items/` | `project`, `method`, `frequency` | purpose, audience, owner |
 | Activity notes | `/api/activity-notes/` | `project`, `note_type`, `note_date_after`, `note_date_before` | title, body, author |
 
+Budgets (see [budgets.md](budgets.md)):
+
+| Resource | Path | Filters | Search covers |
+|---|---|---|---|
+| Budgets | `/api/budgets/` | `project`, `status`, `budget_year`, `project_type` | project, prepared by, notes |
+| Budget line items | `/api/budget-line-items/` | `budget`, `project`, `category` | description |
+| Program budget | `/api/program-budget/` (GET only) | `cycle` (fiscal year, default current), `basis` (`adopted` default, or `proposed`), `program` (a project type) | — |
+
+A budget returns its read-only `total`, `superseded_by` and nested
+`line_items`. Line items are written with their `amounts` as a list of
+`{"fiscal_year": 2028, "amount": "125000.00"}` (each year once); writing
+`amounts` replaces the whole list. Line items of approved, superseded or
+rejected budgets can't be created, changed or deleted. Setting a budget's
+`status` to `APPROVED` needs `approved_by` and `approved_date`, and supersedes
+the project's previously approved budget. A project has one budget per
+`budget_year`. The program budget returns `fiscal_years`, then per program its
+`totals`, `categories` and `projects`, each with `prior_years`,
+`fiscal_years` (`{"FY2027": "..."}`), `five_year_total`, `later_years` and
+`total`.
+
 Risk `score`, stakeholder `engagement_strategy` and milestone `variance_days`
 are read-only computed fields. Stakeholders are written with a `contact` ID and
 return the contact's `contact_name` and `organization`; a contact can appear
@@ -80,6 +100,20 @@ curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/acti
 # Mark an invoice paid
 curl -H "$H" -H "Content-Type: application/json" -X PATCH localhost:8000/api/invoices/<uuid>/ \
   -d '{"status": "PAID", "paid_date": "2026-10-01"}'
+
+# Start an FY2028 budget and add construction costs for FY2028-FY2029
+curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/budgets/ \
+  -d '{"project": "<uuid>", "budget_year": 2028, "prepared_by": "Dana Whitfield"}'
+curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/budget-line-items/ \
+  -d '{"budget": "<uuid>", "category": "CONSTRUCTION", "description": "General contract",
+       "amounts": [{"fiscal_year": 2028, "amount": "1200000.00"}, {"fiscal_year": 2029, "amount": "800000.00"}]}'
+
+# Approve it (supersedes the previously approved budget)
+curl -H "$H" -H "Content-Type: application/json" -X PATCH localhost:8000/api/budgets/<uuid>/ \
+  -d '{"status": "APPROVED", "approved_by": "Board of Commissioners", "approved_date": "2027-09-15"}'
+
+# The proposed FY2028 CIP R&R program
+curl -H "$H" "localhost:8000/api/program-budget/?cycle=2028&basis=proposed&program=CIP_RR"
 ```
 
 Documents need at least one of `project`, `compliance_unit`, `purchase_order`

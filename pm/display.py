@@ -38,10 +38,10 @@ BADGE_CLASSES = {
 }
 
 
-def money(value):
+def money(value, cents=True):
     if value is None:
         return EMPTY
-    return f"${value:,.2f}"
+    return f"${value:,.2f}" if cents else f"${value:,.0f}"
 
 
 def status_badge(obj, name):
@@ -132,6 +132,8 @@ def render_value(obj, name, kind="text"):
         return date_filter(value, "M j, Y")
     if kind == "month":
         return date_filter(value, "M Y")
+    if kind == "fy":
+        return f"FY{value}"
     if kind == "days":
         if value == 0:
             return "On time"
