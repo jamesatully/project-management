@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "pm",
     "planning",
     "budgets",
+    "compliance",
 ]
 
 MIDDLEWARE = [

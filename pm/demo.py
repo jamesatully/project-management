@@ -391,6 +391,10 @@ def money(value):
 # created; other apps (e.g. planning) append to this from AppConfig.ready().
 EXTENSIONS = []
 
+# Models from other apps that ``seed_demo --flush`` deletes before pm's own, in order:
+# ones that PROTECT pm records (e.g. compliance milestones referencing documents).
+FLUSH_FIRST = []
+
 
 class Generator:
     def __init__(self, seed=42, today=None, project_count=100):

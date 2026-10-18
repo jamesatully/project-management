@@ -15,6 +15,7 @@ from pm.models import ComplianceUnit, Contact, Document, FieldReport, Invoice, P
 
 # Delete order respects PROTECT foreign keys (documents reference most other records).
 # Contacts go after projects: deleting a project removes its planning stakeholders, which protect contacts.
+# Other apps' models that protect pm records are deleted first (``demo.FLUSH_FIRST``).
 MODELS = [Document, Invoice, FieldReport, PurchaseOrder, Project, ComplianceUnit, Vendor, Contact]
 
 
@@ -32,14 +33,15 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        existing = sum(m.objects.count() for m in MODELS)
+        models = [*demo.FLUSH_FIRST, *MODELS]
+        existing = sum(m.objects.count() for m in models)
         if existing and not options["flush"]:
             raise CommandError(f"{existing} pm records already exist. Re-run with --flush to replace them.")
         if options["flush"]:
-            for model in MODELS:
+            for model in models:
                 model.objects.all().delete()
 
         counts = demo.generate(seed=options["seed"], today=options["today"], project_count=options["projects"])
         for label, n in counts.items():
-            self.stdout.write(f"  {label:<16} {n:>6}")
+            self.stdout.write(f"  {label:<22} {n:>6}")
         self.stdout.write(self.style.SUCCESS("Demo data loaded."))

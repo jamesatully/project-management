@@ -34,6 +34,12 @@ documents. Every record is also available through a documented REST API.
   line items costed by fiscal year (Oct 1 – Sep 30), rolled up into the CIP
   Expansion, CIP R&R and Development program budgets. See
   [docs/budgets.md](docs/budgets.md).
+- **Permit compliance** (`compliance` app): permits for each compliance unit
+  and the milestones they require (reports, submittals and other deliverables)
+  with condition #, due and internal target dates, a milestone manager, status
+  and the submittal document. Overdue milestones are flagged automatically; a
+  dashboard panel lists what's overdue or due in the next 30 days. See
+  [docs/compliance.md](docs/compliance.md).
 - UUID primary keys, PostgreSQL, Docker, light/dark mode, responsive layout.
 
 ## Quick start
@@ -78,6 +84,7 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 | `/plans/`, `/risks/`, `/milestones/`, `/activity/` | Planning lists across all projects |
 | `/projects/<id>/budget/` | A project's budget versions |
 | `/budgets/`, `/budgets/program/` | All budget versions; the program budget roll-up |
+| `/permits/`, `/compliance-milestones/` | Permits and compliance milestones |
 | `/api/` | Browsable REST API |
 | `/api/docs/` | Swagger UI |
 | `/api/redoc/` | ReDoc |
@@ -97,6 +104,8 @@ Contact ──> (optional) User          Project ──> Contact (project manage
                                      planning Stakeholder ──> Project, Contact
 
 budgets: Project ──< Budget ──< BudgetLineItem ──< BudgetAmount (one per fiscal year)
+
+compliance: Compliance Unit ──< Permit ──< ComplianceMilestone ──> Contact (manager), Document (submittal)
 ```
 
 | Model | Key fields |
@@ -114,7 +123,8 @@ All models use UUID primary keys and carry `created_at` / `updated_at`.
 Full field reference: [docs/data-model.md](docs/data-model.md). Planning models
 (plans, objectives, risks, stakeholders, milestones, communication items,
 activity notes) are described in [docs/planning.md](docs/planning.md); budget
-models in [docs/budgets.md](docs/budgets.md).
+models in [docs/budgets.md](docs/budgets.md); permits and compliance milestones
+in [docs/compliance.md](docs/compliance.md).
 
 ## API
 

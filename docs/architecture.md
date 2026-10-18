@@ -18,6 +18,8 @@ planning/          Project plans and activity notes (see planning.md);
                    plugs into pm via the hooks below
 budgets/           Versioned project budgets and the program roll-up
                    (see budgets.md); plugs into pm the same way
+compliance/        Permits and compliance milestones (see compliance.md);
+                   plugs into pm the same way
 templates/         base layout, dashboard, generic resource pages, login
 docs/              This documentation
 ```
@@ -43,7 +45,7 @@ docs/              This documentation
 ## Extension points
 
 `pm` exposes a few hooks so feature apps can extend the UI without `pm`
-importing them (used by the `planning` and `budgets` apps):
+importing them (used by the `planning`, `budgets` and `compliance` apps):
 
 - `pm.resources.register(resource)` — add a model to the generic CRUD stack
   and, via `nav_group`, to the sidebar.
@@ -57,6 +59,11 @@ importing them (used by the `planning` and `budgets` apps):
 - `pm.resources.register_dashboard_panel(fn)` — `fn(request)` returns a dict
   with a `template` to render at the end of the dashboard.
 - `pm.demo.EXTENSIONS` — add demo data generation to `seed_demo`.
+- `pm.demo.FLUSH_FIRST` — models `seed_demo --flush` deletes before pm's own,
+  for apps whose records protect pm records (compliance milestones reference
+  documents and contacts).
+- `Resource.detail_fields` may include a `Column(name, label, kind)` to show a
+  property on the detail page (e.g. a milestone's derived *Overdue* status).
 - Generic forms honour `?field=value` (pre-fill) and `?next=<local url>`
   (redirect after save/delete); `pm.views.build_table` renders compact tables.
 

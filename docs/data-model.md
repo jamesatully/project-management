@@ -19,7 +19,9 @@ Source of truth: [`pm/models.py`](../pm/models.py). Every model inherits
 A regulated system or permit the utility reports on, e.g. the *Northwest
 Wastewater Treatment System* or the *Central Regional Potable Water System*.
 Compliance records (monitoring reports, permit renewals, inspections) are
-documents linked to the unit.
+documents linked to the unit. Its permits and their compliance milestones live
+in the `compliance` app — see [compliance.md](compliance.md). A unit can't be
+deleted while it has permits.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -44,7 +46,7 @@ projects. Project managers are contacts too. Some contacts are app users; most a
 | `phone` | text | optional |
 | `user` | one-to-one → User | optional. Each user account links to at most one contact. Deleting the user keeps the contact (link cleared). |
 
-A contact can't be deleted while it manages a project or is a stakeholder on any project. A contact's page lists
+A contact can't be deleted while it manages a project or a compliance milestone, or is a stakeholder on any project. A contact's page lists
 the projects they manage.
 
 ## Vendor
@@ -99,7 +101,8 @@ purchase order and invoice, and must link to **at least one** (enforced in
 forms, the API and a database check constraint). For example, a returned-invoice
 letter links to the invoice, its PO and the project; a discharge monitoring
 report links only to its compliance unit. Linked records can't be deleted while
-documents reference them.
+documents reference them, and a document can't be deleted while it's a
+compliance milestone's submittal ([compliance.md](compliance.md)).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -127,6 +130,8 @@ documents reference them.
   `planning.0002`–`0003` create one contact per distinct name + organization
   (as *External*; mark utility staff *Internal* afterwards) and keep the first
   phone or email seen. Rolling back copies the details back onto stakeholders.
+- **Permits and compliance milestones** added in the `compliance` app
+  ([compliance.md](compliance.md)); new tables only, no changes to pm tables.
 
 ## Additions beyond the original spec
 
