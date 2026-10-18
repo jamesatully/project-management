@@ -21,6 +21,8 @@ class ComplianceSeedTests(TestCase):
         self.seed()
         units_with_permits = set(Permit.objects.values_list("compliance_unit", flat=True))
         self.assertEqual(units_with_permits, set(ComplianceUnit.objects.values_list("pk", flat=True)))
+        for permit in Permit.objects.select_related("manager"):
+            self.assertEqual(permit.manager.contact_type, "INTERNAL")
         milestones = ComplianceMilestone.objects.select_related("permit", "manager", "submittal_document")
         self.assertGreater(milestones.count(), 200)
         self.assertTrue(milestones.overdue().exists())

@@ -8,7 +8,8 @@ report. It lives in its own Django app and plugs into `pm` the same way
 
 ```
 pm.ComplianceUnit ──< Permit ──< ComplianceMilestone ──> pm.Contact (milestone manager)
-                                         └──> pm.Document (submittal, optional)
+                        │                └──> pm.Document (submittal, optional)
+                        └──> pm.Contact (permit manager)
 ```
 
 ## Permits
@@ -19,11 +20,17 @@ pm.ComplianceUnit ──< Permit ──< ComplianceMilestone ──> pm.Contact 
 | `name` | text | Permit name, e.g. *Riverbend WWTP NPDES Permit*. |
 | `permit_number` | text | Agency-assigned number. optional; not unique (renewals often keep the number). |
 | `issuing_agency` | text | |
+| `manager` | FK → Contact | *Permit manager*: responsible for the permit overall. Required; must be an **internal** contact. A contact can't be deleted while managing permits. |
 | `status` | choice | `PENDING` (Application Pending), `ACTIVE` (default), `EXTENDED` (Administratively Extended — expired, renewal under review), `EXPIRED`, `TERMINATED` |
 | `effective_date`, `expiration_date` | date | optional; expiration can't precede the effective date |
 | `description` | long text | optional |
 
 The permit list shows each permit's **next due** date (its earliest open milestone).
+
+The permit manager and each milestone's manager are often different people:
+the permit manager owns the permit as a whole, while milestone managers run
+individual deliverables. Both are planned recipients of pending-milestone
+notifications (see *Ideas not built yet*).
 
 ## Compliance milestones
 
@@ -66,7 +73,7 @@ re-sort as usual.
   and sorting.
 - **Compliance unit pages** list the unit's permits; **permit pages** list its
   milestones with an *Add* button that pre-fills the permit.
-- **Contact pages** list the milestones a person manages; **document pages**
+- **Contact pages** list the permits and milestones a person manages; **document pages**
   list the milestones the document is the submittal for.
 - **Dashboard → Compliance deadlines** — overdue milestones and those due in the
   next 30 days, soonest first, with links to the overdue and open lists.
@@ -100,7 +107,9 @@ one-off items. Where pm's generator already filed the matching report under the
 unit (e.g. *Discharge Monitoring Report — May 2026*), that document is the
 submittal and its date the submitted date. Most past milestones were submitted
 on time, a few late, and a couple are left overdue. Six internal compliance
-staff are added to the contact directory as milestone managers. It uses its own
+staff are added to the contact directory as permit and milestone managers: the
+regulatory compliance manager holds the treatment plant and water system
+permits, specialists hold the rest. It uses its own
 random stream, so other demo data doesn't change.
 
 ## Ideas not built yet
@@ -108,5 +117,6 @@ random stream, so other demo data doesn't change.
 - Generating a year of occurrences from a recurring requirement (frequency +
   due-day rule) instead of entering each one.
 - A compliance calendar view, and a *Milestones* tab on compliance unit pages.
-- Email reminders as target and due dates approach.
+- Notifications of pending milestones to both the permit manager and the
+  milestone manager as target and due dates approach.
 - Permit renewal tracking that links the new permit to the one it replaces.

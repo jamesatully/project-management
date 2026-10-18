@@ -65,7 +65,7 @@ Permit compliance (see [compliance.md](compliance.md)):
 
 | Resource | Path | Filters | Search covers |
 |---|---|---|---|
-| Permits | `/api/permits/` | `compliance_unit`, `status`, `expiration_date_before` | name, permit #, agency, description, unit |
+| Permits | `/api/permits/` | `compliance_unit`, `manager` (contact ID), `status`, `expiration_date_before` | name, permit #, agency, description, unit, manager |
 | Compliance milestones | `/api/compliance-milestones/` | `status` (also `OVERDUE` and `OPEN`), `permit`, `compliance_unit`, `manager` (contact ID), `due_date_after`, `due_date_before`, `submittal_document` | name, condition #, description, permit name and #, manager |
 
 A milestone's `status` is the stored progress state (`NOT_STARTED`,
@@ -75,7 +75,8 @@ A milestone's `status` is the stored progress state (`NOT_STARTED`,
 `current_status`: `?status=OVERDUE` finds overdue milestones, `?status=NOT_STARTED`
 and `?status=IN_PROGRESS` leave them out, and `?status=OPEN` returns everything not
 yet submitted or complete. `variance_days` is days submitted late (+) or early (−).
-Writes need an internal contact as `manager`; `target_date` on or before
+Permits and milestones are written with a `manager` contact ID (an internal
+contact) and return `manager_name`. Milestone writes also need `target_date` on or before
 `due_date`; a `submitted_date` (not in the future) for `SUBMITTED` and
 `COMPLETE`; and a `submittal_document` filed under the permit's compliance unit.
 

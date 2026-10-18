@@ -18,6 +18,12 @@ from django.utils import timezone
 from pm.models import BaseModel, ComplianceUnit, Contact, Document
 
 
+def check_internal(contact, field, errors, label):
+    """Managers must be utility staff. limit_choices_to covers forms; this covers the API and later edits."""
+    if contact and contact.contact_type != Contact.ContactType.INTERNAL:
+        errors[field] = f"The {label} must be an internal contact."
+
+
 class Permit(BaseModel):
     """A permit, registration or approval issued to the utility for a compliance unit."""
 
@@ -34,6 +40,14 @@ class Permit(BaseModel):
         "permit number", max_length=50, blank=True, help_text="Number assigned by the issuing agency."
     )
     issuing_agency = models.CharField(max_length=200)
+    manager = models.ForeignKey(
+        Contact,
+        verbose_name="permit manager",
+        on_delete=models.PROTECT,
+        related_name="managed_permits",
+        limit_choices_to={"contact_type": Contact.ContactType.INTERNAL},
+        help_text="Utility staff member responsible for the permit overall (an internal contact).",
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     effective_date = models.DateField(null=True, blank=True)
     expiration_date = models.DateField(null=True, blank=True)
@@ -54,8 +68,12 @@ class Permit(BaseModel):
         return milestone.due_date if milestone else None
 
     def clean(self):
+        errors = {}
+        check_internal(self.manager if self.manager_id else None, "manager", errors, "permit manager")
         if self.effective_date and self.expiration_date and self.expiration_date < self.effective_date:
-            raise ValidationError({"expiration_date": "Expiration date cannot be before the effective date."})
+            errors["expiration_date"] = "Expiration date cannot be before the effective date."
+        if errors:
+            raise ValidationError(errors)
 
 
 class ComplianceMilestoneQuerySet(models.QuerySet):
@@ -160,10 +178,7 @@ class ComplianceMilestone(BaseModel):
 
     def clean(self):
         errors = {}
-        # limit_choices_to covers forms; this covers the API and contacts later switched to External.
-        manager = self.manager if self.manager_id else None
-        if manager and manager.contact_type != Contact.ContactType.INTERNAL:
-            errors["manager"] = "The milestone manager must be an internal contact."
+        check_internal(self.manager if self.manager_id else None, "manager", errors, "milestone manager")
         if self.target_date and self.due_date and self.target_date > self.due_date:
             errors["target_date"] = "The internal target date should be on or before the due date."
         if self.status in self.MET_STATUSES and not self.submitted_date:

@@ -9,13 +9,14 @@ AUDIT = ["created_at", "updated_at"]
 
 class PermitSerializer(ModelCleanMixin, serializers.ModelSerializer):
     compliance_unit_name = serializers.CharField(source="compliance_unit.name", read_only=True)
+    manager_name = serializers.CharField(source="manager.name", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
         model = Permit
         fields = [
             "id", "compliance_unit", "compliance_unit_name", "name", "permit_number", "issuing_agency",
-            "status", "status_display", "effective_date", "expiration_date", "description", *AUDIT,
+            "manager", "manager_name", "status", "status_display", "effective_date", "expiration_date", "description", *AUDIT,
         ]
 
 

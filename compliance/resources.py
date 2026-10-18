@@ -35,12 +35,13 @@ for resource in [
             Column("name", "Permit", "link"),
             Column("permit_number", "Permit #"),
             Column("compliance_unit", "Compliance Unit", "fk"),
+            Column("manager", "Manager", "person"),
             Column("status", "Status", "status"),
             Column("expiration_date", "Expires", "date"),
             Column("next_due", "Next Due", "date"),
         ],
-        search_fields=["name", "permit_number", "issuing_agency", "description", "compliance_unit__name"],
-        select_related=["compliance_unit"],
+        search_fields=["name", "permit_number", "issuing_agency", "description", "compliance_unit__name", "manager__name"],
+        select_related=["compliance_unit", "manager"],
         related=[Related("milestones", "compliancemilestone", "permit")],
     ),
     Resource(
@@ -69,6 +70,7 @@ for resource in [
     register(resource)
 
 register_related("complianceunit", Related("permits", "permit", "compliance_unit"))
+register_related("contact", Related("managed_permits", "permit", "manager"))
 register_related("contact", Related("compliance_milestones", "compliancemilestone", "manager"))
 # Condition and target date are left off on document pages so the table fits.
 register_related(

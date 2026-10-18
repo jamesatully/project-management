@@ -9,6 +9,8 @@ from ..models import ComplianceMilestone, Permit
 
 def make_permit(unit=None, **kw):
     defaults = {"name": "Riverbend WWTP NPDES Permit", "permit_number": "RB-0021457", "issuing_agency": "State DEQ"}
+    if "manager" not in kw:
+        kw["manager"] = make_compliance_manager()
     return Permit.objects.create(compliance_unit=unit or make_compliance_unit(), **{**defaults, **kw})
 
 

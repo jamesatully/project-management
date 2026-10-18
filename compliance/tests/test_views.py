@@ -44,7 +44,9 @@ class ComplianceViewTests(TestCase):
         response = self.client.get(self.permit.get_absolute_url())
         self.assertContains(response, "Corrective Action Plan")
         self.assertContains(response, f"{reverse('pm:compliancemilestone-create')}?permit={self.permit.pk}")
-        self.assertContains(self.client.get(self.overdue.manager.get_absolute_url()), "Corrective Action Plan")
+        contact_page = self.client.get(self.overdue.manager.get_absolute_url())
+        self.assertContains(contact_page, "Corrective Action Plan")  # milestones they manage
+        self.assertContains(contact_page, self.permit.name)  # permits they manage
         self.assertContains(self.client.get(self.doc.get_absolute_url()), self.done.name)
 
     def test_milestone_detail_shows_derived_status_and_variance(self, _today):

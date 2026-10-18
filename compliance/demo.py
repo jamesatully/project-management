@@ -9,7 +9,9 @@ generator already filed the matching report (e.g. "Monthly Operating Report —
 May 2026"), that document is the submittal and its date the submitted date.
 A handful are left open past their due date, so some show as overdue.
 
-Milestone managers are utility compliance staff, added to the contact directory here.
+Permit and milestone managers are utility compliance staff, added to the contact
+directory here. The compliance manager holds the major treatment plant and water
+system permits; specialists hold the rest and run day-to-day milestones.
 
 Runs as an extension of ``pm.demo`` (registered at import, from
 ComplianceConfig.ready()), with its own random stream so other data doesn't change.
@@ -49,6 +51,8 @@ STAFF = {
     "environmental": ("Wesley Hollis", "Environmental Compliance Specialist",
                       "Coordinates biosolids, recycled water and storage tank compliance and inspections."),
 }
+# Unit types whose permits the compliance manager holds.
+MAJOR_PERMIT_TYPES = {CU.WASTEWATER, CU.PUBLIC_WATER_SUPPLY}
 UNIT_STAFF = {
     CU.WASTEWATER: "wastewater", CU.PUBLIC_WATER_SUPPLY: "water", CU.TANK: "environmental",
     CU.WATER_USE_PERMIT: "resources", CU.STORMWATER: "stormwater", CU.OTHER: "environmental",
@@ -268,12 +272,14 @@ class ComplianceGenerator:
                 tank_number += 1
             docs = self.unit_documents(unit)
             manager = staff[UNIT_STAFF[unit.unit_type]]
+            permit_manager = staff["manager"] if unit.unit_type in MAJOR_PERMIT_TYPES else manager
             for name, number, agency, offset, term, templates in specs:
                 effective = datetime.date(self.today.year + offset, self.rng.choice([1, 4, 7, 10]), 1)
                 expiration = effective.replace(year=effective.year + term) - datetime.timedelta(days=1) if term else None
                 status = P.EXTENDED if expiration and expiration < self.today else P.ACTIVE
                 permit = Permit(
-                    compliance_unit=unit, name=name, permit_number=number, issuing_agency=agency, status=status,
+                    compliance_unit=unit, name=name, permit_number=number, issuing_agency=agency,
+                    manager=permit_manager, status=status,
                     effective_date=effective, expiration_date=expiration,
                     description=f"Issued by the {agency} for the {unit.name}." if not term else
                     f"{term}-year permit issued by the {agency} for the {unit.name}.",

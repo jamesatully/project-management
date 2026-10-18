@@ -12,10 +12,11 @@ class ComplianceMilestoneInline(admin.TabularInline):
 
 @admin.register(Permit)
 class PermitAdmin(admin.ModelAdmin):
-    list_display = ["name", "permit_number", "compliance_unit", "issuing_agency", "status", "expiration_date"]
+    list_display = ["name", "permit_number", "compliance_unit", "manager", "status", "expiration_date"]
     list_filter = ["status", "compliance_unit__unit_type"]
-    list_select_related = ["compliance_unit"]
-    search_fields = ["name", "permit_number", "issuing_agency", "compliance_unit__name"]
+    list_select_related = ["compliance_unit", "manager"]
+    search_fields = ["name", "permit_number", "issuing_agency", "compliance_unit__name", "manager__name"]
+    raw_id_fields = ["manager"]
     inlines = [ComplianceMilestoneInline]
 
 

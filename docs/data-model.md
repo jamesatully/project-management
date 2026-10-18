@@ -46,7 +46,7 @@ projects. Project managers are contacts too. Some contacts are app users; most a
 | `phone` | text | optional |
 | `user` | one-to-one → User | optional. Each user account links to at most one contact. Deleting the user keeps the contact (link cleared). |
 
-A contact can't be deleted while it manages a project or a compliance milestone, or is a stakeholder on any project. A contact's page lists
+A contact can't be deleted while it manages a project, permit or compliance milestone, or is a stakeholder on any project. A contact's page lists
 the projects they manage.
 
 ## Vendor

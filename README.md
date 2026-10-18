@@ -34,8 +34,8 @@ documents. Every record is also available through a documented REST API.
   line items costed by fiscal year (Oct 1 – Sep 30), rolled up into the CIP
   Expansion, CIP R&R and Development program budgets. See
   [docs/budgets.md](docs/budgets.md).
-- **Permit compliance** (`compliance` app): permits for each compliance unit
-  and the milestones they require (reports, submittals and other deliverables)
+- **Permit compliance** (`compliance` app): permits (each with a permit
+  manager) for each compliance unit and the milestones they require (reports, submittals and other deliverables)
   with condition #, due and internal target dates, a milestone manager, status
   and the submittal document. Overdue milestones are flagged automatically; a
   dashboard panel lists what's overdue or due in the next 30 days. See
@@ -106,6 +106,7 @@ Contact ──> (optional) User          Project ──> Contact (project manage
 budgets: Project ──< Budget ──< BudgetLineItem ──< BudgetAmount (one per fiscal year)
 
 compliance: Compliance Unit ──< Permit ──< ComplianceMilestone ──> Contact (manager), Document (submittal)
+                                  └──> Contact (permit manager)
 ```
 
 | Model | Key fields |

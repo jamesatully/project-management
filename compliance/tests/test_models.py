@@ -22,11 +22,20 @@ class ComplianceModelTests(TestCase):
         self.permit = make_permit(self.unit)
 
     def test_permit_expiration_cannot_precede_effective_date(self, _today):
-        permit = Permit(compliance_unit=self.unit, name="NPDES", issuing_agency="DEQ",
+        permit = Permit(compliance_unit=self.unit, name="NPDES", issuing_agency="DEQ", manager=make_compliance_manager(),
                         effective_date=datetime.date(2026, 1, 1), expiration_date=datetime.date(2025, 12, 31))
         with self.assertRaises(ValidationError) as ctx:
             permit.full_clean()
         self.assertIn("expiration_date", ctx.exception.message_dict)
+
+    def test_permit_manager_must_be_internal(self, _today):
+        permit = Permit(compliance_unit=self.unit, name="NPDES", issuing_agency="DEQ",
+                        manager=make_contact(contact_type="EXTERNAL"))
+        with self.assertRaises(ValidationError) as ctx:
+            permit.full_clean()
+        self.assertIn("manager", ctx.exception.message_dict)
+        permit.manager = make_compliance_manager()
+        permit.full_clean()
 
     def test_overdue_is_derived_from_due_date_and_status(self, _today):
         past = make_milestone(self.permit, due_date=datetime.date(2026, 7, 9), status=S.IN_PROGRESS)
@@ -77,6 +86,8 @@ class ComplianceModelTests(TestCase):
             doc.delete()
         with self.assertRaises(ProtectedError):
             self.unit.delete()  # the unit has a permit
+        with self.assertRaises(ProtectedError):
+            self.permit.manager.delete()  # manages the permit (and its milestone)
         self.permit.delete()  # milestones go with their permit
         self.assertFalse(ComplianceMilestone.objects.exists())
 

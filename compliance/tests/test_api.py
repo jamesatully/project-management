@@ -30,10 +30,13 @@ class ComplianceApiTests(TestCase):
     def test_create_permit_and_milestone(self, _today):
         response = self.client.post("/api/permits/", {
             "compliance_unit": str(self.unit.pk), "name": "Eastgate NPDES", "issuing_agency": "State DEQ",
-            "effective_date": "2024-01-01", "expiration_date": "2028-12-31",
+            "manager": str(self.manager.pk), "effective_date": "2024-01-01", "expiration_date": "2028-12-31",
         }, format="json")
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.data["compliance_unit_name"], self.unit.name)
+        self.assertEqual(response.data["manager_name"], self.manager.name)
+        response = self.client.get(f"/api/permits/?manager={self.manager.pk}")
+        self.assertEqual(response.data["count"], 2)
 
         response = self.client.post("/api/compliance-milestones/", self.payload(), format="json")
         self.assertEqual(response.status_code, 201, response.data)
@@ -44,10 +47,16 @@ class ComplianceApiTests(TestCase):
     def test_model_rules_apply(self, _today):
         response = self.client.post("/api/permits/", {
             "compliance_unit": str(self.unit.pk), "name": "Bad dates", "issuing_agency": "State DEQ",
-            "effective_date": "2024-01-01", "expiration_date": "2023-12-31",
+            "manager": str(self.manager.pk), "effective_date": "2024-01-01", "expiration_date": "2023-12-31",
         }, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("expiration_date", response.data)
+        response = self.client.post("/api/permits/", {
+            "compliance_unit": str(self.unit.pk), "name": "External manager", "issuing_agency": "State DEQ",
+            "manager": str(make_contact(contact_type="EXTERNAL").pk),
+        }, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("manager", response.data)
 
         for bad, field in [
             ({"target_date": "2026-08-01"}, "target_date"),

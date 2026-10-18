@@ -6,13 +6,22 @@ from pm.models import Document
 from .models import ComplianceMilestone, Permit
 
 
+def staff_label(contact):
+    """Manager choices are internal contacts who share the utility as organization, so show job titles."""
+    return f"{contact.name} — {contact.title}" if contact.title else contact.name
+
+
 class PermitForm(StyledModelForm):
     class Meta:
         model = Permit
         fields = [
-            "compliance_unit", "name", "permit_number", "issuing_agency", "status",
+            "compliance_unit", "name", "permit_number", "issuing_agency", "manager", "status",
             "effective_date", "expiration_date", "description",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["manager"].label_from_instance = staff_label
 
 
 class ComplianceMilestoneForm(StyledModelForm):
@@ -28,8 +37,7 @@ class ComplianceMilestoneForm(StyledModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Choices are internal contacts (limit_choices_to); show job titles rather than the shared organization.
-        self.fields["manager"].label_from_instance = lambda c: f"{c.name} — {c.title}" if c.title else c.name
+        self.fields["manager"].label_from_instance = staff_label
 
         # Only documents filed under a compliance unit can be submittals; narrow to the permit's unit when known.
         documents = Document.objects.filter(compliance_unit__isnull=False).select_related("compliance_unit")

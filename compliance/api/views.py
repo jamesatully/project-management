@@ -7,10 +7,10 @@ from . import serializers
 
 
 class PermitViewSet(viewsets.ModelViewSet):
-    queryset = Permit.objects.select_related("compliance_unit")
+    queryset = Permit.objects.select_related("compliance_unit", "manager")
     serializer_class = serializers.PermitSerializer
     filterset_class = filters.PermitFilter
-    search_fields = ["name", "permit_number", "issuing_agency", "description", "compliance_unit__name"]
+    search_fields = ["name", "permit_number", "issuing_agency", "description", "compliance_unit__name", "manager__name"]
     ordering_fields = ["name", "permit_number", "status", "effective_date", "expiration_date"]
 
 
