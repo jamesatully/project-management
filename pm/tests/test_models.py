@@ -10,7 +10,10 @@ from django.db.models import ProtectedError
 from django.test import TestCase
 
 from ..models import Contact, Document, Invoice, Project
-from .factories import make_compliance_unit, make_contact, make_document, make_invoice, make_po, make_project, make_vendor
+from .factories import (
+    make_compliance_unit, make_contact, make_document, make_invoice, make_po, make_project, make_project_manager,
+    make_vendor,
+)
 
 
 class ProjectModelTests(TestCase):
@@ -29,6 +32,21 @@ class ProjectModelTests(TestCase):
         make_project(project_id="2022-1-1-0")  # same budget ID is fine
         with self.assertRaises(IntegrityError):
             make_project(budget_id="1")
+
+
+class ProjectManagerTests(TestCase):
+    def test_project_manager_must_be_internal(self):
+        project = make_project()
+        project.project_manager = make_contact()  # external
+        with self.assertRaises(ValidationError) as ctx:
+            project.full_clean()
+        self.assertIn("project_manager", ctx.exception.message_dict)
+
+    def test_contact_managing_projects_cannot_be_deleted(self):
+        project = make_project()
+        with self.assertRaises(ProtectedError):
+            project.project_manager.delete()
+        self.assertEqual(list(make_project_manager().managed_projects.all()), [project])
 
 
 class ProjectTypeTests(TestCase):

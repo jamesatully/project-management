@@ -32,6 +32,11 @@ class ProjectForm(StyledModelForm):
         fields = ["name", "project_id", "budget_id", "project_type", "status", "project_manager"]
         widgets = {"project_id": forms.TextInput(attrs={"placeholder": "2021-2-20-0"})}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Choices are internal contacts (limit_choices_to); all share the utility as organization, so show job titles.
+        self.fields["project_manager"].label_from_instance = lambda c: f"{c.name} — {c.title}" if c.title else c.name
+
 
 class VendorForm(StyledModelForm):
     class Meta:

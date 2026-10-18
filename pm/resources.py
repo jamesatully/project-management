@@ -16,7 +16,8 @@ Column ``kind`` values (rendered by ``pm.templatetags.pm_tags.cell``):
 ``link`` (links to the detail page), ``text``, ``money``, ``date``,
 ``status`` (coloured badge), ``fk`` (links to the related object's page),
 ``hours``, ``score`` (1-25 risk score badge), ``month`` (e.g. "Sep 2026"),
-``days`` (signed day variance), ``fy`` (fiscal year, e.g. "FY2027"), ``links`` (a list of records, each linked), ``email`` (mailto link). A column may name a model property instead of
+``days`` (signed day variance), ``fy`` (fiscal year, e.g. "FY2027"), ``links`` (a list of records, each linked), ``email`` (mailto link),
+``person`` (a contact by name, linked). A column may name a model property instead of
 a field; such columns are not sortable.
 """
 from dataclasses import dataclass, field
@@ -102,9 +103,10 @@ REGISTRY = {
                 Column("budget_id", "Budget ID"),
                 Column("project_type", "Type"),
                 Column("status", "Status", "status"),
-                Column("project_manager", "Project Manager"),
+                Column("project_manager", "Project Manager", "person"),
             ],
-            search_fields=["name", "project_id", "budget_id", "project_manager"],
+            search_fields=["name", "project_id", "budget_id", "project_manager__name"],
+            select_related=["project_manager"],
             related=[
                 Related("purchase_orders", "purchaseorder", "project"),
                 Related("field_reports", "fieldreport", "project"),
@@ -238,6 +240,7 @@ REGISTRY = {
             ],
             search_fields=["name", "title", "organization", "role_description", "email"],
             select_related=["user"],
+            related=[Related("managed_projects", "project", "project_manager")],
         ),
     ]
 }

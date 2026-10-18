@@ -174,7 +174,13 @@ class Project(BaseModel):
     )
     project_type = models.CharField(max_length=20, choices=ProjectType.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNING)
-    project_manager = models.CharField(max_length=200, help_text="Project manager's name.")
+    project_manager = models.ForeignKey(
+        Contact,
+        on_delete=models.PROTECT,
+        related_name="managed_projects",
+        limit_choices_to={"contact_type": Contact.ContactType.INTERNAL},
+        help_text="Utility staff member managing the project (an internal contact).",
+    )
 
     url_name = "project"
 
@@ -183,6 +189,12 @@ class Project(BaseModel):
 
     def __str__(self):
         return f"{self.project_id} — {self.name}"
+
+    def clean(self):
+        # limit_choices_to covers forms; this covers the API and contacts later switched to External.
+        manager = getattr(self, "project_manager", None) if self.project_manager_id else None
+        if manager and manager.contact_type != Contact.ContactType.INTERNAL:
+            raise ValidationError({"project_manager": "The project manager must be an internal contact."})
 
 
 class PurchaseOrder(BaseModel):

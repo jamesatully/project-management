@@ -28,7 +28,8 @@ class ComplianceUnitAdmin(admin.ModelAdmin):
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ["project_id", "name", "budget_id", "project_type", "status", "project_manager"]
     list_filter = ["project_type", "status"]
-    search_fields = ["project_id", "name", "budget_id", "project_manager"]
+    search_fields = ["project_id", "name", "budget_id", "project_manager__name"]
+    autocomplete_fields = ["project_manager"]
 
 
 @admin.register(PurchaseOrder)

@@ -12,7 +12,7 @@ Source of truth: [`pm/models.py`](../pm/models.py). Every model inherits
 | `budget_id` | text | Digits only, e.g. `6822015`. Not unique — several projects may share a budget. Indexed. |
 | `project_type` | choice | `CIP_EXPANSION` (CIP Expansion — new capacity or treatment), `CIP_RR` (CIP R&R — renewal and replacement), `DEVELOPMENT` |
 | `status` | choice | `PLANNING` (default), `DESIGN`, `CONSTRUCTION`, `ON_HOLD`, `COMPLETE`, `CANCELLED` |
-| `project_manager` | text | Name. |
+| `project_manager` | FK → Contact | Required. Must be an **internal** contact (checked in `clean()`; the form only offers internal contacts). |
 
 ## Compliance Unit
 
@@ -31,7 +31,7 @@ documents linked to the unit.
 The shared address book: people (and groups such as a board or neighborhood
 association) the utility works with, internal or external. Planning
 stakeholders reference contacts, so a person is entered once and reused across
-projects. Some contacts are app users; most aren't.
+projects. Project managers are contacts too. Some contacts are app users; most aren't.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -44,7 +44,8 @@ projects. Some contacts are app users; most aren't.
 | `phone` | text | optional |
 | `user` | one-to-one → User | optional. Each user account links to at most one contact. Deleting the user keeps the contact (link cleared). |
 
-A contact can't be deleted while it is a stakeholder on any project.
+A contact can't be deleted while it manages a project or is a stakeholder on any project. A contact's page lists
+the projects they manage.
 
 ## Vendor
 

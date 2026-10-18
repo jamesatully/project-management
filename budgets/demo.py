@@ -275,7 +275,7 @@ class BudgetGenerator:
                 project=plan.project,
                 budget_year=cycle,
                 status=status,
-                prepared_by=plan.project.project_manager,
+                prepared_by=plan.project.project_manager.name,
                 submitted_date=submitted,
                 approved_by=BOARD if status == B.APPROVED else "",
                 approved_date=approved if status == B.APPROVED else None,
