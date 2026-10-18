@@ -104,7 +104,7 @@ class ProjectBudgetView(LoginRequiredMixin, generic.DetailView):
             selected=selected,
             next_year=next_year,
             create_url=f"{reverse('pm:budget-create')}?"
-            + urlencode({"project": project.pk, "prepared_by": project.project_manager, "next": here}),
+            + urlencode({"project": project.pk, "prepared_by": project.project_manager.name, "next": here}),
         )
         if selected:
             back = selected.get_absolute_url()
@@ -194,7 +194,7 @@ class BudgetCopyView(LoginRequiredMixin, generic.View):
         if source.project.budgets.filter(budget_year=year).exists():
             messages.error(request, f"This project already has an FY{year} budget.")
             return redirect(source.get_absolute_url())
-        new = source.copy(year, prepared_by=source.project.project_manager)
+        new = source.copy(year, prepared_by=source.project.project_manager.name)
         messages.success(
             request, f"FY{year} draft budget started from the {source.name.lower()}. Update the figures below."
         )

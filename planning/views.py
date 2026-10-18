@@ -37,7 +37,7 @@ def monthly_update_url(project, next_url, period=None):
     period = period or previous_month()
     return create_url(
         "activitynote", next_url, project=project.pk, note_type=ActivityNote.NoteType.MONTHLY,
-        period=period.strftime("%Y-%m"), author_name=project.project_manager,
+        period=period.strftime("%Y-%m"), author_name=project.project_manager.name,
     )
 
 
@@ -104,7 +104,7 @@ class ProjectActivityView(ProjectTabMixin, generic.DetailView):
             monthly_url=monthly_update_url(project, here, last_month),
             note_url=create_url(
                 "activitynote", here, project=project.pk, note_type=ActivityNote.NoteType.GENERAL,
-                author_name=project.project_manager,
+                author_name=project.project_manager.name,
             ),
             edit_suffix=f"?{urlencode({'next': here})}",
         )
@@ -120,7 +120,8 @@ def updates_due_panel(request):
     missing = (
         Project.objects.filter(status__in=ACTIVE_STATUSES)
         .exclude(activity_notes__note_type=ActivityNote.NoteType.MONTHLY, activity_notes__period=period)
-        .order_by("project_manager", "project_id")
+        .select_related("project_manager")
+        .order_by("project_manager__name", "project_id")
     )
     here = reverse("pm:dashboard")
     return {

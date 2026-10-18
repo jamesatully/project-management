@@ -59,16 +59,17 @@ class ComplianceUnitSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "unit_type", "unit_type_display", "created_at", "updated_at"]
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(ModelCleanMixin, serializers.ModelSerializer):
     project_type_display = serializers.CharField(source="get_project_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    project_manager_name = serializers.CharField(source="project_manager.name", read_only=True)
 
     class Meta:
         model = Project
         fields = [
             "id", "name", "project_id", "budget_id",
             "project_type", "project_type_display", "status", "status_display",
-            "project_manager", "created_at", "updated_at",
+            "project_manager", "project_manager_name", "created_at", "updated_at",
         ]
 
 

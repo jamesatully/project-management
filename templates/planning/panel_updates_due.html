@@ -10,7 +10,7 @@
     <li class="flex items-center justify-between gap-4 py-3">
       <div class="min-w-0">
         <a href="{% url 'planning:project-activity' row.project.pk %}" class="block truncate font-medium text-ink hover:text-primary dark:text-white">{{ row.project.name }}</a>
-        <p class="text-xs">{{ row.project.project_id }} · {{ row.project.project_manager }}</p>
+        <p class="text-xs">{{ row.project.project_id }} · {{ row.project.project_manager.name }}</p>
       </div>
       <a href="{{ row.add_url }}" class="shrink-0 text-sm font-medium text-primary hover:underline">Add update</a>
     </li>

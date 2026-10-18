@@ -6,7 +6,7 @@ from ..models import Contact, Project, Vendor
 from ..resources import REGISTRY
 from .factories import (
     make_compliance_unit, make_contact, make_document, make_field_report, make_invoice, make_po, make_project,
-    make_vendor,
+    make_project_manager, make_vendor,
 )
 
 
@@ -64,11 +64,35 @@ class ViewTests(TestCase):
                 "budget_id": "7000001",
                 "project_type": "CIP_RR",
                 "status": "PLANNING",
-                "project_manager": "Jo Smith",
+                "project_manager": make_project_manager("Jo Smith").pk,
             },
         )
         project = Project.objects.get(project_id="2025-4-2-1")
         self.assertRedirects(response, project.get_absolute_url())
+
+    def test_project_manager_filter(self):
+        other = make_project_manager("Robin Planner")
+        make_project(project_id="2022-1-1-0", name="Reservoir Recoat", project_manager=other)
+        url = reverse("pm:project-list")
+        response = self.client.get(url, {"project_manager": other.pk})
+        self.assertContains(response, "Reservoir Recoat")
+        self.assertNotContains(response, "Main St Rehab")
+        # The dropdown lists people who manage projects, not the whole contact directory.
+        field = response.context["filter_form"].fields["project_manager"]
+        choices = [field.label_from_instance(c) for c in field.queryset]
+        self.assertEqual(sorted(choices), ["Pat Example", "Robin Planner"])
+        # Search still finds projects by the manager's name.
+        self.assertContains(self.client.get(url, {"q": "robin"}), "Reservoir Recoat")
+
+    def test_project_manager_form_offers_internal_contacts_only(self):
+        response = self.client.get(reverse("pm:project-create"))
+        queryset = response.context["form"].fields["project_manager"].queryset
+        self.assertIn(self.project.project_manager, queryset)
+        self.assertNotIn(self.objects["contact"], queryset)  # external
+
+    def test_contact_page_lists_managed_projects(self):
+        response = self.client.get(self.project.project_manager.get_absolute_url())
+        self.assertContains(response, "Main St Rehab")
 
     def test_create_prefills_from_querystring(self):
         response = self.client.get(reverse("pm:fieldreport-create"), {"project": self.project.pk})

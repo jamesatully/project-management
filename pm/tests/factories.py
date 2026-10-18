@@ -9,14 +9,24 @@ def make_vendor(**kw):
     return Vendor.objects.create(**{"name": "Acme Paving", **kw})
 
 
+def make_project_manager(name="Pat Example"):
+    """An internal contact to manage projects; reused by name so tests share one PM by default."""
+    contact, _ = Contact.objects.get_or_create(
+        name=name, contact_type=Contact.ContactType.INTERNAL,
+        defaults={"title": "Project Manager", "organization": "Engineering"},
+    )
+    return contact
+
+
 def make_project(**kw):
     defaults = {
         "name": "Main St Rehab",
         "project_id": "2021-2-20-0",
         "budget_id": "6822015",
         "project_type": Project.ProjectType.CIP_RR,
-        "project_manager": "Pat Example",
     }
+    if "project_manager" not in kw:
+        kw["project_manager"] = make_project_manager()
     return Project.objects.create(**{**defaults, **kw})
 
 

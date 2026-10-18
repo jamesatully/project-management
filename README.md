@@ -16,7 +16,7 @@ documents. Every record is also available through a documented REST API.
   search, filters, sortable columns and pagination.
 - **Related records on detail pages**: a project shows its POs, field reports and
   documents; a vendor shows its POs and invoices; a PO shows its invoices; a
-  contact shows the projects they're a stakeholder on.
+  contact shows the projects they manage and the ones they're a stakeholder on.
 - **Contacts**: a shared directory of internal and external people, optionally
   linked to app user accounts; planning stakeholders are chosen from it.
 - **REST API** for all data, with interactive docs (Swagger UI and ReDoc) and an
@@ -93,14 +93,15 @@ Project ──< (optional) PurchaseOrder
 
 Document ──> Project, Compliance Unit, Purchase Order, Invoice   (any combination, at least one)
 
-Contact ──> (optional) User          planning Stakeholder ──> Project, Contact
+Contact ──> (optional) User          Project ──> Contact (project manager)
+                                     planning Stakeholder ──> Project, Contact
 
 budgets: Project ──< Budget ──< BudgetLineItem ──< BudgetAmount (one per fiscal year)
 ```
 
 | Model | Key fields |
 |---|---|
-| **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP Expansion / CIP R&R / Development), status, project manager |
+| **Project** | name, project ID (unique, e.g. `2021-2-20-0`), budget ID (e.g. `6822015`, may repeat), type (CIP Expansion / CIP R&R / Development), status, project manager (an internal contact) |
 | **Compliance Unit** | unit name (e.g. *Northwest Wastewater Treatment System*), unit type (Water Use Permit / Public Water Supply / Wastewater / Tank / Stormwater / Other) |
 | **Contact** | name, job title, organization, internal/external, role in organization, email, phone, app user *(optional)* |
 | **Vendor** | name, mailing address, website, primary contact name and phone |

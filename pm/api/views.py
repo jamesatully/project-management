@@ -35,10 +35,10 @@ class ComplianceUnitViewSet(viewsets.ModelViewSet):
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
+    queryset = Project.objects.select_related("project_manager")
     serializer_class = serializers.ProjectSerializer
     filterset_class = filters.ProjectFilter
-    search_fields = ["name", "project_id", "budget_id", "project_manager"]
+    search_fields = ["name", "project_id", "budget_id", "project_manager__name"]
     ordering_fields = ["name", "project_id", "budget_id", "status", "created_at"]
 
 

@@ -20,7 +20,7 @@ Each resource supports `GET` (list), `POST` (create), and on `/<id>/`:
 
 | Resource | Path | Filters (`?field=value`) | Search (`?search=`) covers |
 |---|---|---|---|
-| Projects | `/api/projects/` | `status`, `project_type`, `budget_id` | name, project ID, budget ID, PM |
+| Projects | `/api/projects/` | `project_manager` (contact ID), `status`, `project_type`, `budget_id` | name, project ID, budget ID, PM name |
 | Vendors | `/api/vendors/` | — | name, contact, address |
 | Purchase orders | `/api/purchase-orders/` | `status`, `vendor`, `project`, `start_date_after`, `end_date_before` | PO #, contract #, vendor, project |
 | Invoices | `/api/invoices/` | `status`, `vendor`, `purchase_order`, `project`, `invoice_date_after`, `invoice_date_before` | invoice #, vendor, PO # |
@@ -64,7 +64,8 @@ the project's previously approved budget. A project has one budget per
 Risk `score`, stakeholder `engagement_strategy` and milestone `variance_days`
 are read-only computed fields. Stakeholders are written with a `contact` ID and
 return the contact's `contact_name` and `organization`; a contact can appear
-only once per project. Contacts return `username` for a linked user. A monthly note's `period` may be any date in the
+only once per project. Projects are written with a `project_manager` contact ID (an internal contact) and return
+the manager's `project_manager_name`. Contacts return `username` for a linked user. A monthly note's `period` may be any date in the
 month; it is stored as the 1st.
 
 Also on every list: `?ordering=<field>` (prefix `-` for descending) and
@@ -87,7 +88,10 @@ curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/vend
 # Create a project
 curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/projects/ \
   -d '{"name": "Riverside Trail Extension", "project_id": "2024-3-14-0", "budget_id": "6822015",
-       "project_type": "CIP", "status": "CONSTRUCTION", "project_manager": "Dana Whitfield"}'
+       "project_type": "CIP_RR", "status": "CONSTRUCTION", "project_manager": "<contact uuid>"}'
+
+# Active construction projects for one project manager
+curl -H "$H" "localhost:8000/api/projects/?project_manager=<contact uuid>&status=CONSTRUCTION"
 
 # Open POs for a project, largest first
 curl -H "$H" "localhost:8000/api/purchase-orders/?project=<uuid>&status=OPEN&ordering=-amount"

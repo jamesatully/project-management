@@ -122,6 +122,10 @@ def render_value(obj, name, kind="text"):
         return format_html(
             '<a href="{}" class="font-medium text-primary hover:underline">{}</a>', obj.get_absolute_url(), text
         )
+    if kind == "person":  # a contact, by name only (its organization is too long for a table cell)
+        return format_html(
+            '<a href="{}" class="hover:text-primary hover:underline">{}</a>', value.get_absolute_url(), value.name
+        )
     if kind == "fk":
         if not hasattr(value, "get_absolute_url"):  # e.g. a user account, which has no page here
             return str(value)

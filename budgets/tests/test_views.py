@@ -68,7 +68,7 @@ class BudgetViewTests(TestCase):
         new = Budget.objects.get(project=self.project, budget_year=2028)
         self.assertRedirects(response, reverse("budgets:line-items", args=[new.pk]))
         self.assertEqual(
-            (new.status, new.total, new.prepared_by), (S.DRAFT, Decimal("500000"), self.project.project_manager)
+            (new.status, new.total, new.prepared_by), (S.DRAFT, Decimal("500000"), self.project.project_manager.name)
         )
         # Only one version per cycle.
         self.client.post(reverse("budgets:copy", args=[source.pk]))

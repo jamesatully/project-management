@@ -643,7 +643,7 @@ class PlanningGenerator:
     def communications(self, plan):
         kind = {"study": "study", "environmental": "environmental", "development": "development"}.get(
             plan.category, "construction")
-        owners = {"pm": plan.project.project_manager, "sponsor": ENGINEERING_MANAGER, "pio": PIO,
+        owners = {"pm": plan.project.project_manager.name, "sponsor": ENGINEERING_MANAGER, "pio": PIO,
                   "inspector": self.pick(pm_demo.INSPECTORS)}
         return [
             CommunicationItem(project=plan.project, purpose=purpose, audience=audience, method=method,
@@ -706,14 +706,16 @@ class PlanningGenerator:
                 continue
             notes.append(ActivityNote(
                 project=plan.project, note_type=ActivityNote.NoteType.MONTHLY, period=month, note_date=note_date,
-                author_name=plan.project.project_manager if self.rng.random() < 0.92 else self.pick(pm_demo.INSPECTORS),
+                author_name=(
+                    plan.project.project_manager.name if self.rng.random() < 0.92 else self.pick(pm_demo.INSPECTORS)
+                ),
                 body=self.monthly_body(plan, month, cs),
             ))
         if months:
             for note_type, pool in [(ActivityNote.NoteType.DECISION, DECISIONS), (ActivityNote.NoteType.ISSUE, NOTE_ISSUES)]:
                 for title, body in self.rng.sample(pool, self.rng.choice([0, 0, 1, 1, 2])):
                     notes.append(ActivityNote(
-                        project=plan.project, note_type=note_type, author_name=plan.project.project_manager,
+                        project=plan.project, note_type=note_type, author_name=plan.project.project_manager.name,
                         note_date=self.gen.date_between(months[0], min(end, self.today)), title=title, body=body,
                     ))
         return notes
@@ -732,7 +734,7 @@ class PlanningGenerator:
             created[Objective] += self.objectives(plan, milestones[-1].planned_date)
             stakeholders = self.stakeholders(plan)
             created[Stakeholder] += stakeholders
-            owners = [plan.project.project_manager, plan.project.project_manager, ENGINEERING_MANAGER] + [
+            owners = [plan.project.project_manager.name, plan.project.project_manager.name, ENGINEERING_MANAGER] + [
                 s.contact.name for s in stakeholders if s.contact.organization.startswith(UTILITY) and s.contact.title]
             created[Risk] += self.risks(plan, owners)
             created[CommunicationItem] += self.communications(plan)

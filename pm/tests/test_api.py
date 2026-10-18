@@ -3,7 +3,8 @@ from rest_framework.test import APITestCase
 
 from ..models import Project
 from .factories import (
-    make_compliance_unit, make_contact, make_document, make_field_report, make_invoice, make_po, make_project, make_vendor,
+    make_compliance_unit, make_contact, make_document, make_field_report, make_invoice, make_po, make_project,
+    make_project_manager, make_vendor,
 )
 
 
@@ -24,7 +25,7 @@ class APITests(APITestCase):
         make_field_report(self.project)
         make_document(self.project)
         make_compliance_unit()
-        make_contact()
+        # The one contact is the project's manager.
         for endpoint in ["projects", "vendors", "compliance-units", "purchase-orders", "invoices", "field-reports",
                          "documents", "contacts"]:
             with self.subTest(endpoint=endpoint):
@@ -41,7 +42,7 @@ class APITests(APITestCase):
                 "budget_id": "6822015",
                 "project_type": "CIP_EXPANSION",
                 "status": "DESIGN",
-                "project_manager": "Alex Doe",
+                "project_manager": make_project_manager("Alex Doe").pk,
             },
         )
         self.assertEqual(response.status_code, 201, response.data)
@@ -51,7 +52,8 @@ class APITests(APITestCase):
     def test_invalid_project_id_rejected(self):
         response = self.client.post(
             "/api/projects/",
-            {"name": "X", "project_id": "bad", "budget_id": "1", "project_type": "CIP_RR", "project_manager": "Y"},
+            {"name": "X", "project_id": "bad", "budget_id": "1", "project_type": "CIP_RR",
+             "project_manager": make_project_manager().pk},
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("project_id", response.data)
@@ -77,11 +79,26 @@ class APITests(APITestCase):
         self.assertEqual(self.client.get("/api/projects/?search=sewer").data["count"], 1)
         self.assertEqual(self.client.get(f"/api/invoices/?project={self.project.pk}").data["count"], 0)
 
+    def test_project_manager(self):
+        data = self.client.get(f"/api/projects/{self.project.pk}/").data
+        self.assertEqual(data["project_manager"], self.project.project_manager.pk)
+        self.assertEqual(data["project_manager_name"], "Pat Example")
+
+        other = make_project_manager("Robin Planner")
+        make_project(project_id="2022-1-1-0", project_manager=other)
+        self.assertEqual(self.client.get(f"/api/projects/?project_manager={other.pk}").data["count"], 1)
+        self.assertEqual(self.client.get("/api/projects/?search=robin").data["count"], 1)
+
+    def test_external_project_manager_rejected(self):
+        response = self.client.patch(f"/api/projects/{self.project.pk}/", {"project_manager": make_contact().pk})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("project_manager", response.data)
+
     def test_removed_project_type_rejected(self):
         response = self.client.post(
             "/api/projects/",
             {"name": "X", "project_id": "2024-1-1-0", "budget_id": "1", "project_type": "ENVIRONMENTAL",
-             "project_manager": "Y"},
+             "project_manager": make_project_manager().pk},
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("project_type", response.data)

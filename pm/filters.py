@@ -8,10 +8,26 @@ from django import forms
 from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
 
+class ContactNameChoiceField(django_filters.fields.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.name
+
+
+class ContactNameFilter(django_filters.ModelChoiceFilter):
+    """Lists contacts by name alone; the organization makes filter dropdowns too wide."""
+
+    field_class = ContactNameChoiceField
+
+
 class ProjectFilter(django_filters.FilterSet):
+    # Only contacts who manage at least one project, so the dropdown lists the PMs and nobody else.
+    project_manager = ContactNameFilter(
+        queryset=Contact.objects.filter(managed_projects__isnull=False).distinct(), label="Project manager"
+    )
+
     class Meta:
         model = Project
-        fields = ["status", "project_type", "budget_id"]
+        fields = ["project_manager", "status", "project_type", "budget_id"]
 
 
 class VendorFilter(django_filters.FilterSet):

@@ -485,7 +485,9 @@ class Generator:
                     budget_id=self.pick(spec["budgets"]),
                     project_type=EXPANSION if template in spec.get("expansion", ()) else spec["type"],
                     status=self.status_for(start, category),
-                    project_manager=pm_deck.pop() if pm_deck else self.pick(PROJECT_MANAGERS),
+                    project_manager=self.contacts[
+                        (pm_deck.pop() if pm_deck else self.pick(PROJECT_MANAGERS), ENGINEERING)
+                    ],
                 )
                 plans.append(Plan(project=project, category=category, start=start))
         for p in plans:
@@ -682,7 +684,7 @@ class Generator:
             for d in dates:
                 reports.append(FieldReport(
                     project=plan.project,
-                    entered_by=plan.project.project_manager if self.rng.random() < 0.2 else self.pick(INSPECTORS),
+                    entered_by=plan.project.project_manager.name if self.rng.random() < 0.2 else self.pick(INSPECTORS),
                     report_date=d,
                     data_entry_date=min(d + datetime.timedelta(days=self.rng.choice([0, 0, 0, 1, 1, 2, 3])), self.today),
                     time_on_site=Decimal(self.rng.randint(2, 32)) / 4,
@@ -910,13 +912,13 @@ class Generator:
     # -- entry point -----------------------------------------------------------
     def run(self):
         vendors = self.make_vendors()
+        contacts = self.make_contacts()  # before projects: project managers are contacts
         plans = self.make_projects()
         pos = self.make_purchase_orders(plans)
         invoices = self.make_invoices(pos)
         reports = self.make_field_reports(plans)
         units = self.make_compliance_units()
         documents = self.make_documents(plans, pos, invoices)
-        contacts = self.make_contacts()
         counts = {
             "vendors": len(vendors), "projects": len(plans), "purchase orders": len(pos),
             "invoices": len(invoices), "field reports": len(reports), "compliance units": len(units),
