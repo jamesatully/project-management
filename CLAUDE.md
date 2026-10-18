@@ -47,7 +47,10 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - `budgets/` — versioned annual project budgets (line items by fiscal year,
   Oct 1 – Sep 30) and the program budget roll-up (`budgets/rollup.py`). Same
   plug-in pattern as planning; pm must never import it. See docs/budgets.md.
-- `docs/` — data-model.md, api.md, architecture.md, planning.md, budgets.md.
+- `compliance/` — permits per compliance unit and their compliance milestones
+  (due dates, status with derived "overdue", submittal documents). Same plug-in
+  pattern; pm must never import it. See docs/compliance.md.
+- `docs/` — data-model.md, api.md, architecture.md, planning.md, budgets.md, compliance.md.
 
 ## Conventions
 
@@ -57,7 +60,8 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
   FilterSet, `resources.py` entry, admin, **docs/data-model.md**, and tests.
 - When adding an API filter or endpoint, update **docs/api.md**.
 - New feature areas go in their own app and extend pm through its hooks
-  (`register`, `register_tab`, `register_nav_link`, `register_dashboard_panel`, `demo.EXTENSIONS`)
+  (`register`, `register_tab`, `register_nav_link`, `register_dashboard_panel`, `demo.EXTENSIONS`,
+  `demo.FLUSH_FIRST`)
   rather than editing pm templates/views directly.
 - Money is `DecimalField(max_digits=14, decimal_places=2)`; render with
   `display.money` / the `money` template filter.

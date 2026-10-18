@@ -61,6 +61,25 @@ the project's previously approved budget. A project has one budget per
 `fiscal_years` (`{"FY2027": "..."}`), `five_year_total`, `later_years` and
 `total`.
 
+Permit compliance (see [compliance.md](compliance.md)):
+
+| Resource | Path | Filters | Search covers |
+|---|---|---|---|
+| Permits | `/api/permits/` | `compliance_unit`, `manager` (contact ID), `status`, `expiration_date_before` | name, permit #, agency, description, unit, manager |
+| Compliance milestones | `/api/compliance-milestones/` | `status` (also `OVERDUE` and `OPEN`), `permit`, `compliance_unit`, `manager` (contact ID), `due_date_after`, `due_date_before`, `submittal_document` | name, condition #, description, permit name and #, manager |
+
+A milestone's `status` is the stored progress state (`NOT_STARTED`,
+`IN_PROGRESS`, `SUBMITTED`, `COMPLETE`); read-only `current_status` is
+`OVERDUE` when the due date has passed and it isn't submitted or complete, and
+`is_overdue` says the same as a boolean. The `status` filter matches
+`current_status`: `?status=OVERDUE` finds overdue milestones, `?status=NOT_STARTED`
+and `?status=IN_PROGRESS` leave them out, and `?status=OPEN` returns everything not
+yet submitted or complete. `variance_days` is days submitted late (+) or early (−).
+Permits and milestones are written with a `manager` contact ID (an internal
+contact) and return `manager_name`. Milestone writes also need `target_date` on or before
+`due_date`; a `submitted_date` (not in the future) for `SUBMITTED` and
+`COMPLETE`; and a `submittal_document` filed under the permit's compliance unit.
+
 Risk `score`, stakeholder `engagement_strategy` and milestone `variance_days`
 are read-only computed fields. Stakeholders are written with a `contact` ID and
 return the contact's `contact_name` and `organization`; a contact can appear
@@ -129,6 +148,13 @@ curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/docu
        "document_type": "REPORT", "document_date": "2026-10-20",
        "originating_organization": "Riverbend Water & Sewer Utility",
        "recipient_organization": "State Department of Environmental Quality"}'
+```
+
+```bash
+# Overdue compliance milestones, oldest first; then mark one submitted with its report
+curl -H "$H" "localhost:8000/api/compliance-milestones/?status=OVERDUE&ordering=due_date"
+curl -H "$H" -H "Content-Type: application/json" -X PATCH localhost:8000/api/compliance-milestones/<uuid>/ \
+  -d '{"status": "SUBMITTED", "submitted_date": "2026-10-16", "submittal_document": "<document uuid>"}'
 ```
 
 ## Validation errors

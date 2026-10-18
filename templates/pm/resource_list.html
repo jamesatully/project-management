@@ -51,7 +51,7 @@
         {% for obj, cells in rows %}
         <tr class="hover:bg-whiten/60 dark:hover:bg-boxdark-2/60">
           {% for col, cell in cells %}
-          <td class="px-6 py-3.5 {% if col.kind == 'links' %}min-w-[14rem]{% elif col.kind == 'text' or col.kind == 'link' %}min-w-[9rem]{% else %}whitespace-nowrap{% endif %} {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
+          <td class="px-6 py-3.5 {% if col.kind == 'links' %}min-w-[14rem]{% elif col.kind == 'text' or col.kind == 'link' or col.kind == 'fk' %}min-w-[9rem]{% else %}whitespace-nowrap{% endif %} {% if col.kind == 'money' or col.kind == 'hours' %}text-right tabular-nums{% endif %}">{{ cell }}</td>
           {% endfor %}
         </tr>
         {% empty %}

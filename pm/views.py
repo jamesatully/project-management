@@ -23,7 +23,7 @@ from django.views import generic
 from . import display
 from .forms import INPUT_CLASSES
 from .models import Document, FieldReport, Invoice, Project, PurchaseOrder
-from .resources import DASHBOARD_PANELS, DETAIL_TABS, REGISTRY, Tab
+from .resources import DASHBOARD_PANELS, DETAIL_TABS, REGISTRY, Column, Tab
 
 ZERO = Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
 
@@ -236,15 +236,21 @@ class ResourceDetailView(ResourceMixin, generic.DetailView):
         names = self.resource.detail_fields or [
             f.name for f in self.model._meta.concrete_fields if f.name not in {"id", "created_at", "updated_at"}
         ]
-        fields = [self.model._meta.get_field(n) for n in names]
-        ctx["fields"] = [
-            {
-                "label": f.verbose_name[:1].upper() + f.verbose_name[1:],
-                "value": display.render_value(obj, f.name, display.infer_kind(f)),
-                "wide": isinstance(f, models.TextField),
-            }
-            for f in fields
-        ]
+        ctx["fields"] = []
+        for name in names:
+            if isinstance(name, Column):  # a property, e.g. a derived status
+                ctx["fields"].append(
+                    {"label": name.label, "value": display.render_value(obj, name.name, name.kind), "wide": False}
+                )
+                continue
+            f = self.model._meta.get_field(name)
+            ctx["fields"].append(
+                {
+                    "label": f.verbose_name[:1].upper() + f.verbose_name[1:],
+                    "value": display.render_value(obj, f.name, display.infer_kind(f)),
+                    "wide": isinstance(f, models.TextField),
+                }
+            )
         here = self.request.path
         ctx["related_tables"] = []
         for rel in self.resource.related:

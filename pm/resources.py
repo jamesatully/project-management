@@ -73,7 +73,7 @@ class Resource:
     search_fields: list = field(default_factory=list)
     select_related: list = field(default_factory=list)
     related: list = field(default_factory=list)
-    # Fields shown on the detail page; defaults to every concrete field.
+    # Fields shown on the detail page (names, or Column(...) for a property); defaults to every concrete field.
     detail_fields: list = field(default_factory=list)
     url_prefix: str = ""  # e.g. "projects" -> /projects/
     nav_group: str | None = "Records"  # sidebar heading; None hides it from the sidebar
