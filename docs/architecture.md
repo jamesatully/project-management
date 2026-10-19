@@ -20,6 +20,8 @@ budgets/           Versioned project budgets and the program roll-up
                    (see budgets.md); plugs into pm the same way
 compliance/        Permits and compliance milestones (see compliance.md);
                    plugs into pm the same way
+mcp_server/        MCP server for AI agents at /mcp/ and the Agent Access
+                   token page (see mcp.md)
 templates/         base layout, dashboard, generic resource pages, login
 docs/              This documentation
 ```
@@ -53,7 +55,8 @@ importing them (used by the `planning`, `budgets` and `compliance` apps):
   table to another resource's detail page (contacts show their stakeholder roles).
 - `pm.resources.register_nav_link(NavLink(group, label, url_name, icon, key))` —
   add a sidebar link to a page that isn't a resource list (budgets' *Program
-  Budget* report).
+  Budget* report). Links in the `"Developer"` group join the sidebar's
+  Developer section after *API docs* and *Admin* (mcp_server's *Agent Access*).
 - `pm.resources.register_tab(resource_key, Tab(label, url_name))` — add a tab
   to a detail page (project pages get *Plan* and *Activity*).
 - `pm.resources.register_dashboard_panel(fn)` — `fn(request)` returns a dict
@@ -92,4 +95,5 @@ Before running this as a public hosted app:
 4. **Database.** Point `POSTGRES_*` at a managed PostgreSQL instance and back it up.
 5. **Demo access.** Decide whether visitors get a shared read-only demo
    account or self-signup; the API currently requires authentication for all
-   access.
+   access. The MCP server (`/mcp/`) uses the same tokens; serve it over HTTPS
+   only, since the token travels in a header.

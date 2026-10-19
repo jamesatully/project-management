@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from pm.tests.factories import make_project
 
-from ..models import Budget, BudgetLineItem
+from ..models import Budget, BudgetLineItem, next_budget_year
 from .factories import add_line, make_budget
 
 S = Budget.Status
@@ -110,3 +110,17 @@ class BudgetApiTests(TestCase):
         self.assertEqual(program["projects"][0]["project_id"], self.project.project_id)
         self.assertEqual(data["totals"]["total"], "105.00")
         self.assertEqual(self.client.get("/api/program-budget/", {"basis": "nope"}).status_code, 400)
+
+    def test_new_version_copies_into_next_cycle(self):
+        year = next_budget_year()
+        source = make_budget(self.project, year - 1, S.APPROVED)
+        add_line(source, amounts={year: "500"})
+        response = self.client.post(f"/api/budgets/{source.pk}/new-version/")
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["budget_year"], year)
+        self.assertEqual(response.data["status"], S.DRAFT)
+        self.assertEqual(response.data["total"], "500.00")
+        # A second copy into the same cycle is refused.
+        response = self.client.post(f"/api/budgets/{source.pk}/new-version/")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("budget_year", response.data)

@@ -2,7 +2,8 @@
 
 A Django dashboard for tracking capital, development and environmental projects
 together with their vendors, purchase orders, invoices, field reports and
-documents. Every record is also available through a documented REST API.
+documents. Every record is also available through a documented REST API and an
+MCP server for AI agents.
 
 > **Demo data only.** All project names, people, vendors, budgets and invoices
 > in this app are fictitious. It exists to prototype components and features for
@@ -24,6 +25,10 @@ documents. Every record is also available through a documented REST API.
   linked to app user accounts; planning stakeholders are chosen from it.
 - **REST API** for all data, with interactive docs (Swagger UI and ReDoc) and an
   OpenAPI schema.
+- **MCP server for agents** (`mcp_server` app): agents such as Claude Code can
+  read, create and edit every record (no deleting) at `/mcp/`, authenticated
+  with the user's API token; the *Agent Access* page manages the token. See
+  [docs/mcp.md](docs/mcp.md).
 - **Business rules** enforced the same way in forms and the API (e.g. an invoice's
   vendor must match its purchase order's vendor; paid invoices need a paid date).
 - **Project planning** (`planning` app): a plan per project — problem
@@ -89,6 +94,7 @@ invented; the generator lives in [`pm/demo.py`](pm/demo.py).
 | `/budgets/`, `/budgets/program/` | All budget versions; the program budget roll-up |
 | `/permits/`, `/compliance-milestones/` | Permits and compliance milestones |
 | `/api/` | Browsable REST API |
+| `/mcp/`, `/agent-access/` | MCP server for agents; your token and connection instructions |
 | `/api/docs/` | Swagger UI |
 | `/api/redoc/` | ReDoc |
 | `/admin/` | Django admin |
@@ -141,10 +147,19 @@ curl -H "Authorization: Token <key>" "localhost:8000/api/projects/?status=CONSTR
 
 See [docs/api.md](docs/api.md) for endpoints, filters and examples.
 
+## Agents (MCP)
+
+```bash
+# Token from Developer → Agent Access in the sidebar
+claude mcp add --transport http projecthub http://localhost:8000/mcp/ --header "Authorization: Bearer <key>"
+```
+
+See [docs/mcp.md](docs/mcp.md) for the tools and how authentication works.
+
 ## Development
 
 ```bash
-docker compose exec web python manage.py test pm planning budgets  # run tests
+docker compose exec web python manage.py test pm planning budgets compliance mcp_server  # run tests
 docker compose exec web python manage.py makemigrations # after model changes
 docker compose logs -f web                              # server logs
 ```

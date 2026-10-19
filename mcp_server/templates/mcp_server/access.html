@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Agent Access{% endblock %}
+{% block page_title %}Agent Access{% endblock %}
+
+{% block content %}
+<div class="mb-5">
+  <h2 class="text-2xl font-semibold text-ink dark:text-white">Connect an AI agent</h2>
+  <p class="mt-1 max-w-3xl text-sm">
+    ProjectHub runs an <span class="font-medium">MCP server</span> so agents such as Claude Code can read, create
+    and edit records on your behalf. Agents sign in with your personal API token and can do what you can in the
+    API, except delete records. Treat the token like a password.
+  </p>
+</div>
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+  {# ---------- Token ---------- #}
+  <section class="rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-1">
+    <h3 class="font-semibold text-ink dark:text-white">Your API token</h3>
+    {% if new_key %}
+    <p class="mt-2 text-sm">Copy this token now. Afterwards only its first characters are shown.</p>
+    <div x-data="{ copied: false }" class="mt-3 flex items-stretch gap-2">
+      <code class="min-w-0 flex-1 break-all rounded-lg border border-stroke bg-whiten px-3 py-2 font-mono text-sm text-ink dark:border-strokedark dark:bg-boxdark-2 dark:text-white">{{ new_key }}</code>
+      <button type="button" @click="navigator.clipboard.writeText('{{ new_key }}'); copied = true"
+              class="shrink-0 rounded-lg border border-stroke px-3 text-sm font-medium text-ink hover:bg-whiten dark:border-strokedark dark:text-white dark:hover:bg-boxdark-2"
+              x-text="copied ? 'Copied' : 'Copy'">Copy</button>
+    </div>
+    {% elif token %}
+    <dl class="mt-3 space-y-2 text-sm">
+      <div class="flex justify-between gap-4"><dt class="text-bodydark2">Token</dt><dd class="font-mono text-ink dark:text-white">{{ token.key|slice:":6" }}…</dd></div>
+      <div class="flex justify-between gap-4"><dt class="text-bodydark2">Created</dt><dd class="text-ink dark:text-white">{{ token.created|date:"M j, Y g:i A" }}</dd></div>
+    </dl>
+    {% else %}
+    <p class="mt-2 text-sm">You don't have a token yet. Create one to connect an agent.</p>
+    {% endif %}
+
+    <div class="mt-5 flex flex-wrap gap-3">
+      <form method="post">
+        {% csrf_token %}
+        <button name="action" value="create"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-medium text-white hover:bg-primary/90">
+          {% include "partials/icon.html" with name="key" size="h-4 w-4" %} {% if token %}Regenerate token{% else %}Create token{% endif %}
+        </button>
+      </form>
+      {% if token %}
+      <form method="post" onsubmit="return confirm('Revoke your token? Agents and scripts using it will stop working.')">
+        {% csrf_token %}
+        <button name="action" value="revoke"
+                class="rounded-lg border border-stroke px-4 py-2 font-medium text-danger hover:bg-whiten dark:border-strokedark dark:hover:bg-boxdark-2">
+          Revoke
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% if token %}
+    <p class="mt-4 text-xs text-bodydark2">The same token works for the REST API. Regenerating or revoking it disconnects everything that uses it.</p>
+    {% endif %}
+  </section>
+
+  {# ---------- Connect ---------- #}
+  <section class="min-w-0 rounded-lg border border-stroke bg-white p-6 shadow-card dark:border-strokedark dark:bg-boxdark xl:col-span-2">
+    <h3 class="font-semibold text-ink dark:text-white">Connect</h3>
+    <p class="mt-2 text-sm">Server URL (Streamable HTTP): <code class="break-all font-mono text-ink dark:text-white">{{ mcp_url }}</code></p>
+
+    <p class="mt-4 text-sm font-medium text-ink dark:text-white">Claude Code</p>
+    <pre class="mt-2 overflow-x-auto rounded-lg border border-stroke bg-whiten p-3 font-mono text-xs text-ink dark:border-strokedark dark:bg-boxdark-2 dark:text-white">claude mcp add --transport http projecthub {{ mcp_url }} \
+  --header "Authorization: Bearer {{ new_key|default:'&lt;your token&gt;' }}"</pre>
+
+    <p class="mt-4 text-sm font-medium text-ink dark:text-white">Other MCP clients (<code class="font-mono">.mcp.json</code> style)</p>
+    <pre class="mt-2 overflow-x-auto rounded-lg border border-stroke bg-whiten p-3 font-mono text-xs text-ink dark:border-strokedark dark:bg-boxdark-2 dark:text-white">{
+  "mcpServers": {
+    "projecthub": {
+      "type": "http",
+      "url": "{{ mcp_url }}",
+      "headers": {"Authorization": "Bearer {{ new_key|default:'&lt;your token&gt;' }}"}
+    }
+  }
+}</pre>
+    <p class="mt-3 text-xs text-bodydark2">Keep tokens out of files you commit; most clients can read the header value from an environment variable.</p>
+  </section>
+</div>
+
+{# ---------- Tools ---------- #}
+<section class="mt-6 rounded-lg border border-stroke bg-white shadow-card dark:border-strokedark dark:bg-boxdark">
+  <h3 class="border-b border-stroke px-6 py-4 font-semibold text-ink dark:border-strokedark dark:text-white">What agents can do</h3>
+  <ul class="divide-y divide-stroke dark:divide-strokedark">
+    {% for tool in tools %}
+    <li class="flex flex-col gap-1 px-6 py-3 sm:flex-row sm:gap-6">
+      <div class="shrink-0 sm:w-56">
+        <p class="font-medium text-ink dark:text-white">{{ tool.title }}</p>
+        <p class="font-mono text-xs text-bodydark2">{{ tool.name }}</p>
+      </div>
+      <p class="text-sm">{{ tool.description }}</p>
+      <span class="shrink-0 self-start rounded-full px-2.5 py-0.5 text-xs font-medium sm:ml-auto {% if tool.annotations.readOnlyHint %}bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300{% else %}bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300{% endif %}">
+        {% if tool.annotations.readOnlyHint %}Read{% else %}Write{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

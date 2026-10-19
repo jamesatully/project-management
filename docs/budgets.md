@@ -27,7 +27,8 @@ own line items, so earlier versions stay as a record of what was approved.
 | Rejected | Not adopted. Ignored by the roll-up, which falls back to the project's last approved budget. |
 
 Approved, superseded and rejected budgets are **locked**: their line items and
-amounts can't change in the UI or the API. To revise one, start a new version.
+amounts can't change in the UI or the API. To revise one, start a new version
+(the *New version* button, or `POST /api/budgets/<id>/new-version/`).
 An older cycle can't be approved over a newer approved one.
 
 Example: a project started in FY2024 has an approved FY2024 budget. In early
