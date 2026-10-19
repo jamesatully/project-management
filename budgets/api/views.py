@@ -4,14 +4,15 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers as drf_serializers
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from pm.models import Project
 
 from .. import filters, rollup
-from ..models import Budget, BudgetLineItem, check_editable, current_fiscal_year
+from ..models import Budget, BudgetLineItem, check_editable, current_fiscal_year, next_budget_year
 from . import serializers
 
 
@@ -21,6 +22,17 @@ class BudgetViewSet(viewsets.ModelViewSet):
     filterset_class = filters.BudgetFilter
     search_fields = ["project__name", "project__project_id", "prepared_by", "notes"]
     ordering_fields = ["budget_year", "status", "approved_date", "updated_at"]
+
+    @extend_schema(request=None, responses={201: serializers.BudgetSerializer})
+    @action(detail=True, methods=["post"], url_path="new-version", url_name="new-version")
+    def new_version(self, request, pk=None):
+        """Start the next budget cycle's draft from this budget's line items and amounts (as the web UI does)."""
+        source = self.get_object()
+        year = next_budget_year()
+        if source.project.budgets.filter(budget_year=year).exists():
+            raise drf_serializers.ValidationError({"budget_year": f"This project already has an FY{year} budget."})
+        new = source.copy(year, prepared_by=source.project.project_manager.name)
+        return Response(self.get_serializer(new).data, status=status.HTTP_201_CREATED)
 
 
 class BudgetLineItemViewSet(viewsets.ModelViewSet):

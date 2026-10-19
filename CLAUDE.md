@@ -16,7 +16,7 @@ reload automatically.
 
 ```bash
 docker compose up -d --build                            # start (http://localhost:8000)
-docker compose exec web python manage.py test pm planning budgets  # tests — run after every change
+docker compose exec web python manage.py test pm planning budgets compliance mcp_server  # tests — run after every change
 docker compose exec web python manage.py makemigrations pm
 docker compose exec web python manage.py migrate
 docker compose logs -f web
@@ -50,7 +50,11 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - `compliance/` — permits per compliance unit and their compliance milestones
   (due dates, status with derived "overdue", submittal documents). Same plug-in
   pattern; pm must never import it. See docs/compliance.md.
-- `docs/` — data-model.md, api.md, architecture.md, planning.md, budgets.md, compliance.md.
+- `mcp_server/` — MCP server for agents at `/mcp/` (token auth, no delete tool) and
+  the Agent Access token page. Tools run the DRF viewsets in-process; resources are
+  discovered from each app's `api/urls.py` `router`, so new API resources appear
+  automatically. Special endpoints need a tool in `mcp_server/tools.py`. See docs/mcp.md.
+- `docs/` — data-model.md, api.md, architecture.md, planning.md, budgets.md, compliance.md, mcp.md.
 
 ## Conventions
 
@@ -58,7 +62,8 @@ owned by the host user: `docker compose run --rm -u "$(id -u):$(id -g)" --entryp
 - Put validation in model `clean()` so forms and API agree; add a test for it.
 - When changing a model: update the form field list, serializer `fields`,
   FilterSet, `resources.py` entry, admin, **docs/data-model.md**, and tests.
-- When adding an API filter or endpoint, update **docs/api.md**.
+- When adding an API filter or endpoint, update **docs/api.md** (and, for a non-router
+  endpoint or custom action agents should use, add an MCP tool and update docs/mcp.md).
 - New feature areas go in their own app and extend pm through its hooks
   (`register`, `register_tab`, `register_nav_link`, `register_dashboard_panel`, `demo.EXTENSIONS`,
   `demo.FLUSH_FIRST`)

@@ -17,6 +17,8 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="api-schema"), name="api-docs"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="api-schema"), name="api-redoc"),
+    # MCP server for agents (token auth) and its Agent Access page
+    path("", include("mcp_server.urls")),
     # Web UI
     path("", include("planning.urls")),
     path("", include("budgets.urls")),

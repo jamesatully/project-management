@@ -13,6 +13,9 @@ All endpoints require authentication.
 - **Session**: if you're signed in to the web UI, the browsable API and
   Swagger UI work directly.
 
+The same token connects AI agents through the MCP server; see [mcp.md](mcp.md).
+Signed-in users can create or rotate their token on the *Agent Access* page.
+
 ## Endpoints
 
 Each resource supports `GET` (list), `POST` (create), and on `/<id>/`:
@@ -47,6 +50,7 @@ Budgets (see [budgets.md](budgets.md)):
 |---|---|---|---|
 | Budgets | `/api/budgets/` | `project`, `status`, `budget_year`, `project_type` | project, prepared by, notes |
 | Budget line items | `/api/budget-line-items/` | `budget`, `project`, `category` | description |
+| New budget version | `/api/budgets/<id>/new-version/` (POST only) | — | — |
 | Program budget | `/api/program-budget/` (GET only) | `cycle` (fiscal year, default current), `basis` (`adopted` default, or `proposed`), `program` (a project type) | — |
 
 A budget returns its read-only `total`, `superseded_by` and nested
@@ -56,7 +60,10 @@ A budget returns its read-only `total`, `superseded_by` and nested
 rejected budgets can't be created, changed or deleted. Setting a budget's
 `status` to `APPROVED` needs `approved_by` and `approved_date`, and supersedes
 the project's previously approved budget. A project has one budget per
-`budget_year`. The program budget returns `fiscal_years`, then per program its
+`budget_year`. `POST /api/budgets/<id>/new-version/` copies a budget's line items
+and amounts into a new draft for the next budget cycle (as the web UI's *New
+version* button), returning it with `201`, or `400` if the project already has
+a budget for that cycle. The program budget returns `fiscal_years`, then per program its
 `totals`, `categories` and `projects`, each with `prior_years`,
 `fiscal_years` (`{"FY2027": "..."}`), `five_year_total`, `later_years` and
 `total`.

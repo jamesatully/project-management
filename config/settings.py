@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "planning",
     "budgets",
     "compliance",
+    "mcp_server",
 ]
 
 MIDDLEWARE = [
