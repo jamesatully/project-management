@@ -4,9 +4,11 @@ update / partial update / delete, plus ``?search=``, ``?ordering=`` and the
 field filters defined in :mod:`pm.filters`.
 """
 from rest_framework import viewsets
+from rest_framework.decorators import action
 
 from .. import filters
 from ..models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from ..views import document_file_response
 from . import serializers
 
 
@@ -75,3 +77,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         "purchase_order__po_number", "invoice__invoice_number",
     ]
     ordering_fields = ["document_date", "added_date", "last_edited_date", "document_type"]
+
+    @action(detail=True, url_path="file", url_name="file")
+    def download(self, request, pk=None):
+        """The document's uploaded file, inline under its original name (404 if it has none)."""
+        return document_file_response(self.get_object())

@@ -57,7 +57,7 @@ class FieldReportAdmin(admin.ModelAdmin):
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ["subject", "project", "compliance_unit", "document_type", "document_date"]
+    list_display = ["subject", "project", "compliance_unit", "document_type", "document_date", "file"]
     list_filter = ["document_type"]
     search_fields = ["subject", "originating_organization", "recipient_organization"]
     autocomplete_fields = ["project", "compliance_unit", "purchase_order", "invoice"]

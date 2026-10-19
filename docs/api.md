@@ -140,7 +140,10 @@ curl -H "$H" "localhost:8000/api/program-budget/?cycle=2028&basis=proposed&progr
 ```
 
 Documents need at least one of `project`, `compliance_unit`, `purchase_order`
-or `invoice`:
+or `invoice`. A document's file is uploaded as `multipart/form-data` on create
+or update; responses give `file` (a download URL under the API, so token auth
+works) and `file_name`, both `null` when there is none. Send `"file": null` to
+remove it. `GET /api/documents/<id>/file/` returns the file itself (`404` if none).
 
 ```bash
 curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/documents/ \
@@ -148,6 +151,10 @@ curl -H "$H" -H "Content-Type: application/json" -X POST localhost:8000/api/docu
        "document_type": "REPORT", "document_date": "2026-10-20",
        "originating_organization": "Riverbend Water & Sewer Utility",
        "recipient_organization": "State Department of Environmental Quality"}'
+
+# Attach (or replace) its PDF, then download it
+curl -H "$H" -X PATCH -F "file=@DMR-2026-09.pdf" localhost:8000/api/documents/<uuid>/
+curl -H "$H" -o DMR-2026-09.pdf localhost:8000/api/documents/<uuid>/file/
 ```
 
 ```bash

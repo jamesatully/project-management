@@ -14,6 +14,9 @@ documents. Every record is also available through a documented REST API.
   by status/type, invoices awaiting payment, recent field reports and documents.
 - **List / detail / create / edit / delete** pages for every record type, with
   search, filters, sortable columns and pagination.
+- **Document files**: attach a PDF (or Word, Excel, image, ...) to a document;
+  it opens in a new tab from the document list and detail pages. Files are only
+  served to logged-in users.
 - **Related records on detail pages**: a project shows its POs, field reports and
   documents; a vendor shows its POs and invoices; a PO shows its invoices; a
   contact shows the projects they manage and the ones they're a stakeholder on.
@@ -118,7 +121,7 @@ compliance: Compliance Unit ──< Permit ──< ComplianceMilestone ──> C
 | **Purchase Order** | PO number, status, amount, vendor, project *(optional)*, contract number, start/end dates |
 | **Invoice** | invoice number (unique per vendor), vendor, purchase order, status, amount, invoice/received/paid dates |
 | **Field Report** | project, entered by, report date, data entry date, hours on site, observation/safety/weather notes |
-| **Document** | links to a project, compliance unit, PO and/or invoice; subject, originating and recipient organizations, type, document date, added and last-edited timestamps |
+| **Document** | links to a project, compliance unit, PO and/or invoice; subject, originating and recipient organizations, type, document date, an optional uploaded file (PDF, Word, Excel, ...), added and last-edited timestamps |
 
 All models use UUID primary keys and carry `created_at` / `updated_at`.
 Full field reference: [docs/data-model.md](docs/data-model.md). Planning models

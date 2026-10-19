@@ -9,7 +9,10 @@ from .resources import REGISTRY
 
 app_name = "pm"
 
-urlpatterns = [path("", views.DashboardView.as_view(), name="dashboard")]
+urlpatterns = [
+    path("", views.DashboardView.as_view(), name="dashboard"),
+    path("documents/<uuid:pk>/file/", views.DocumentFileView.as_view(), name="document-file"),
+]
 
 for key, resource in REGISTRY.items():
     prefix = resource.url_prefix

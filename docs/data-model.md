@@ -104,6 +104,16 @@ report links only to its compliance unit. Linked records can't be deleted while
 documents reference them, and a document can't be deleted while it's a
 compliance milestone's submittal ([compliance.md](compliance.md)).
 
+A document can carry **one uploaded file** (mostly PDFs). Allowed types: PDF,
+Word (`doc`/`docx`), Excel (`xls`/`xlsx`/`csv`), PowerPoint (`ppt`/`pptx`),
+OpenDocument (`odt`/`ods`/`odp`), `rtf`, `txt`, Outlook/email (`msg`/`eml`) and
+images (`png`/`jpg`/`jpeg`/`tif`/`tiff`), up to 50 MB. Files are stored under
+`MEDIA_ROOT/documents/<document id>/` (default `./media`, git-ignored) and are
+**not** publicly served: `/documents/<id>/file/` returns the file to logged-in
+users, inline, so PDFs, images and text open in the browser tab and other types
+download. Replacing or removing a file, or deleting its document, deletes the
+old file from storage.
+
 | Field | Type | Notes |
 |---|---|---|
 | `project` | FK → Project | optional |
@@ -114,6 +124,7 @@ compliance milestone's submittal ([compliance.md](compliance.md)).
 | `originating_organization`, `recipient_organization` | text | |
 | `document_type` | choice | `LETTER`, `MEMO`, `EMAIL`, `RFI`, `SUBMITTAL`, `CHANGE_ORDER`, `MEETING_MINUTES`, `REPORT`, `DRAWING`, `OTHER` |
 | `document_date` | date | Date on the document. |
+| `file` | file | optional; see allowed types above. |
 | `added_date` | datetime | Set automatically on creation. |
 | `last_edited_date` | datetime | Updated automatically on every save. |
 
@@ -132,6 +143,8 @@ compliance milestone's submittal ([compliance.md](compliance.md)).
   phone or email seen. Rolling back copies the details back onto stakeholders.
 - **Permits and compliance milestones** added in the `compliance` app
   ([compliance.md](compliance.md)); new tables only, no changes to pm tables.
+- **Document files**: `Document.file` added (migration `pm.0007`, optional, so
+  existing documents are unaffected).
 
 ## Additions beyond the original spec
 

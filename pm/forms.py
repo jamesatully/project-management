@@ -3,14 +3,38 @@ ModelForms for data entry. :class:`StyledModelForm` applies the Tailwind
 classes used throughout the UI and renders dates with the native date picker.
 """
 from django import forms
+from django.template.loader import render_to_string
+from django.utils.safestring import mark_safe
 
-from .models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
+from .models import (
+    DOCUMENT_FILE_EXTENSIONS, ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor,
+)
 
 INPUT_CLASSES = (
     "w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-ink "
     "outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 "
     "dark:border-strokedark dark:bg-boxdark-2 dark:text-white"
 )
+
+FILE_INPUT_CLASSES = (
+    "w-full cursor-pointer rounded-lg border border-stroke bg-transparent text-sm text-ink "
+    "file:mr-4 file:cursor-pointer file:border-0 file:border-r file:border-stroke file:bg-whiten "
+    "file:px-4 file:py-2.5 file:font-medium file:text-ink hover:file:bg-stroke/60 "
+    "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 "
+    "dark:border-strokedark dark:bg-boxdark-2 dark:text-white dark:file:border-strokedark "
+    "dark:file:bg-boxdark dark:file:text-white dark:hover:file:bg-strokedark"
+)
+
+
+class FileLinkInput(forms.ClearableFileInput):
+    """File picker that links the current file (opening in a new tab) and offers a "Remove file" checkbox."""
+
+    template_name = "partials/file_input.html"
+    clear_checkbox_label = "Remove file"
+
+    def render(self, name, value, attrs=None, renderer=None):
+        # Rendered with the project template engine so the template can live in templates/ with the others.
+        return mark_safe(render_to_string(self.template_name, self.get_context(name, value, attrs)))
 
 
 class StyledModelForm(forms.ModelForm):
@@ -23,7 +47,7 @@ class StyledModelForm(forms.ModelForm):
                 widget.format = "%Y-%m-%d"
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 4)
-            widget.attrs["class"] = INPUT_CLASSES
+            widget.attrs["class"] = FILE_INPUT_CLASSES if isinstance(widget, forms.FileInput) else INPUT_CLASSES
 
 
 class ProjectForm(StyledModelForm):
@@ -87,5 +111,7 @@ class DocumentForm(StyledModelForm):
         fields = [
             "project", "compliance_unit", "purchase_order", "invoice",
             "subject", "document_type", "document_date", "originating_organization", "recipient_organization",
+            "file",
         ]
         help_texts = {"project": "Link at least one project, compliance unit, purchase order or invoice."}
+        widgets = {"file": FileLinkInput(attrs={"accept": ",".join(f".{e}" for e in DOCUMENT_FILE_EXTENSIONS)})}

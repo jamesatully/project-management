@@ -192,7 +192,7 @@ REGISTRY = {
             filterset_class=filters.DocumentFilter,
             icon="document",
             columns=[
-                Column("subject", "Subject", "link"),
+                Column("subject", "Subject", "link_file"),
                 Column("linked_records", "Linked To", "links"),
                 Column("document_type", "Type"),
                 Column("originating_organization", "From"),

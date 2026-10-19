@@ -6,6 +6,7 @@ rules as the web forms.
 """
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from ..models import ComplianceUnit, Contact, Document, FieldReport, Invoice, Project, PurchaseOrder, Vendor
 
@@ -116,7 +117,21 @@ class FieldReportSerializer(serializers.ModelSerializer):
         ]
 
 
+class DocumentFileField(serializers.FileField):
+    """Accepts an upload; reads back as the API download URL (which honours token auth)."""
+
+    def to_representation(self, value):
+        if not value:
+            return None
+        url = reverse("document-file", args=[value.instance.pk])
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
+
+
 class DocumentSerializer(ModelCleanMixin, serializers.ModelSerializer):
+    file = DocumentFileField(required=False, allow_null=True, validators=Document._meta.get_field("file").validators)
+    file_name = serializers.SerializerMethodField()
+
     project_display = serializers.CharField(source="project", read_only=True)
     compliance_unit_name = serializers.CharField(source="compliance_unit.name", read_only=True, default=None)
     po_number = serializers.CharField(source="purchase_order.po_number", read_only=True, default=None)
@@ -130,6 +145,9 @@ class DocumentSerializer(ModelCleanMixin, serializers.ModelSerializer):
             "document_type", "document_type_display", "document_date",
             "project", "project_display", "compliance_unit", "compliance_unit_name",
             "purchase_order", "po_number", "invoice", "invoice_number",
-            "added_date", "last_edited_date",
+            "file", "file_name", "added_date", "last_edited_date",
         ]
         read_only_fields = ["added_date", "last_edited_date"]
+
+    def get_file_name(self, obj) -> str | None:
+        return obj.file.filename if obj.file else None

@@ -9,7 +9,7 @@ Relationships::
        └──< FieldReport
 
     Document ──> Project, ComplianceUnit, PurchaseOrder, Invoice
-                 (each optional; at least one required)
+                 (each optional; at least one required) + optional file
 
     Contact ──> (optional) User
 
@@ -17,12 +17,14 @@ Relationships::
 Every model uses a UUID primary key and carries ``created_at`` / ``updated_at``
 audit timestamps via :class:`BaseModel`.
 """
+import os
 import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, RegexValidator
 from django.db import models
+from django.db.models.fields.files import FieldFile
 from django.urls import reverse
 from django.utils import timezone
 
@@ -303,6 +305,46 @@ class FieldReport(BaseModel):
         return f"Field report {self.report_date} — {self.project.project_id}"
 
 
+class ProtectedFieldFile(FieldFile):
+    """An uploaded file whose ``url`` is the login-protected view that serves it, not a public media URL."""
+
+    @property
+    def url(self):
+        self._require_file()
+        return reverse(f"pm:{self.instance.url_name}-file", args=[self.instance.pk])
+
+    @property
+    def filename(self):
+        return os.path.basename(self.name)
+
+    @property
+    def extension(self):
+        return os.path.splitext(self.name)[1].lstrip(".").upper()
+
+
+class ProtectedFileField(models.FileField):
+    """FileField served only to logged-in users through ``pm:<url_name>-file`` (see ``views.DocumentFileView``)."""
+
+    attr_class = ProtectedFieldFile
+
+
+DOCUMENT_FILE_EXTENSIONS = [
+    "pdf", "doc", "docx", "xls", "xlsx", "csv", "ppt", "pptx", "odt", "ods", "odp", "rtf", "txt",
+    "msg", "eml", "png", "jpg", "jpeg", "tif", "tiff",
+]
+DOCUMENT_FILE_MAX_MB = 50
+
+
+def validate_file_size(file):
+    if file.size > DOCUMENT_FILE_MAX_MB * 1024 * 1024:
+        raise ValidationError(f"Files can be at most {DOCUMENT_FILE_MAX_MB} MB.")
+
+
+def document_upload_to(instance, filename):
+    # One folder per document keeps the original file name (Django only sanitizes it).
+    return f"documents/{instance.pk}/{filename}"
+
+
 class Document(BaseModel):
     """
     Correspondence or a record (letter, RFI, submittal, report, ...).
@@ -310,6 +352,10 @@ class Document(BaseModel):
     A document links to any combination of a project, compliance unit,
     purchase order and invoice, but must link to at least one. Links use
     PROTECT: a record can't be deleted while documents still reference it.
+
+    It may carry one uploaded file (mostly PDFs), stored under MEDIA_ROOT and
+    served only to logged-in users. Replaced or removed files are deleted from
+    storage (see ``pm.signals``).
     """
 
     class DocumentType(models.TextChoices):
@@ -337,6 +383,13 @@ class Document(BaseModel):
     recipient_organization = models.CharField(max_length=200)
     document_type = models.CharField(max_length=20, choices=DocumentType.choices)
     document_date = models.DateField()
+    file = ProtectedFileField(
+        upload_to=document_upload_to,
+        max_length=255,
+        blank=True,
+        validators=[FileExtensionValidator(DOCUMENT_FILE_EXTENSIONS), validate_file_size],
+        help_text=f"PDF, Word, Excel, PowerPoint, text, email or image file, up to {DOCUMENT_FILE_MAX_MB} MB.",
+    )
     added_date = models.DateTimeField(auto_now_add=True)
     last_edited_date = models.DateTimeField(auto_now=True)
 
