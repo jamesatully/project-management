@@ -1,0 +1,15 @@
+{% comment %}Widget for pm.forms.FileLinkInput: the current file (opens in a new tab), a remove checkbox, then the picker.{% endcomment %}
+{% if widget.is_initial %}
+<div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-stroke bg-whiten px-3 py-2 dark:border-strokedark dark:bg-boxdark-2">
+  <a href="{{ widget.value.url }}" target="_blank" rel="noopener" class="break-all font-medium text-primary hover:underline">{{ widget.value.filename }}</a>
+  {% if not widget.required %}
+  <label for="{{ widget.checkbox_id }}" class="inline-flex items-center gap-1.5 text-xs text-body dark:text-bodydark">
+    <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"
+           class="rounded border-stroke text-danger focus:ring-danger/30 dark:border-strokedark dark:bg-boxdark"{% if widget.attrs.checked %} checked{% endif %}>
+    {{ widget.clear_checkbox_label }}
+  </label>
+  {% endif %}
+</div>
+<p class="mb-1 text-xs text-bodydark2">Choose a file to replace it:</p>
+{% endif %}
+<input type="{{ widget.type }}" name="{{ widget.name }}"{% for attr, value in widget.attrs.items %}{% if value is not False %} {{ attr }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>

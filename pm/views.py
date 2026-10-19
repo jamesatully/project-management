@@ -15,7 +15,8 @@ from django.db import models
 from django.db.models import Count, DecimalField, Q, Sum, Value
 from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce
-from django.shortcuts import redirect
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import generic
@@ -304,6 +305,27 @@ class ResourceCreateView(ResourceFormMixin, generic.CreateView):
 
 class ResourceUpdateView(ResourceFormMixin, generic.UpdateView):
     is_update = True
+
+
+class DocumentFileView(LoginRequiredMixin, generic.View):
+    """
+    Serve a document's uploaded file inline under its original name. Browsers show PDFs, images
+    and text in the tab; other types (Word, Excel, ...) download.
+    """
+
+    def get(self, request, pk):
+        return document_file_response(get_object_or_404(Document, pk=pk))
+
+
+def document_file_response(document):
+    """Inline FileResponse for ``document.file`` (shared with the API)."""
+    if not document.file:
+        raise Http404("This document has no file.")
+    try:
+        handle = document.file.open("rb")
+    except FileNotFoundError:
+        raise Http404("The file is missing from storage.")
+    return FileResponse(handle, filename=document.file.filename)
 
 
 class ResourceDeleteView(ResourceMixin, generic.DeleteView):

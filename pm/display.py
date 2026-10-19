@@ -8,6 +8,13 @@ from django.template.defaultfilters import linebreaksbr
 from django.utils.html import format_html, format_html_join
 
 EMPTY = format_html('<span class="text-bodydark2">—</span>')
+# Heroicons "paper-clip" (outline), for links to uploaded files.
+PAPERCLIP = format_html(
+    '<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" '
+    'aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 '
+    '0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 '
+    '0 0 0 2.112 2.13"/></svg>'
+)
 
 # Status value -> badge colour. Anything not listed renders grey.
 STATUS_COLORS = {
@@ -76,6 +83,8 @@ def infer_kind(field):
     """Pick a display kind for a model field (used on detail pages)."""
     if isinstance(field, models.ForeignKey):
         return "fk"
+    if isinstance(field, models.FileField):
+        return "file"
     if field.name == "status":
         return "status"
     if field.name == "score":
@@ -147,6 +156,22 @@ def render_value(obj, name, kind="text"):
             abs(value),
             "" if abs(value) == 1 else "s",
             "late" if value > 0 else "early",
+        )
+    if kind == "file":  # the file name, opening in a new tab
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 break-all font-medium '
+            'text-primary hover:underline">{}{}</a>',
+            value.url, PAPERCLIP, value.filename,
+        )
+    if kind == "link_file":  # a record link followed by a paperclip that opens its file (if any) in a new tab
+        link = render_value(obj, name, "link")
+        if not obj.file:
+            return link
+        return format_html(
+            '{} <a href="{}" target="_blank" rel="noopener" title="Open {}" aria-label="Open {}" class="ml-0.5 '
+            'inline-flex translate-y-0.5 items-center gap-0.5 whitespace-nowrap rounded px-1 text-xs font-medium '
+            'text-bodydark2 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/20">{}{}</a>',
+            link, obj.file.url, obj.file.filename, obj.file.filename, PAPERCLIP, obj.file.extension,
         )
     if kind == "datetime":
         return date_filter(value, "M j, Y g:i A")
